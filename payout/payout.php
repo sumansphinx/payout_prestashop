@@ -52,9 +52,9 @@ class Payout extends PaymentModule
 
         $this->confirmUninstall = $this->l('');
 
-        $this->limited_countries = array('FR','US','IN');
+        $this->limited_countries = array('SK');
 
-        $this->limited_currencies = array('EUR','INR','USD');
+        $this->limited_currencies = array('EUR');
 
         $this->ps_versions_compliancy = array('min' => '1.6', 'max' => _PS_VERSION_);
     }
