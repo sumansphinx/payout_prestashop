@@ -271,23 +271,6 @@ class Payout extends PaymentModule
     }
 
     /**
-     * This method is used to render the payment button,
-     * Take care if the button should be displayed or not.
-     */
-    public function hookPayment($params)
-    {
-        $currency_id = $params['cart']->id_currency;
-        $currency = new Currency((int)$currency_id);
-
-        if (in_array($currency->iso_code, $this->limited_currencies) == false)
-            return false;
-
-        $this->smarty->assign('module_dir', $this->_path);
-
-        return $this->display(__FILE__, 'views/templates/hook/payment.tpl');
-    }
-
-    /**
      * This hook is used to display the order confirmation page.
      */
     public function hookPaymentReturn($params)

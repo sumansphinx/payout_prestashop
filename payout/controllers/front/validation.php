@@ -24,7 +24,6 @@
 *  International Registered Trademark & Property of PrestaShop SA
 */
 
-ini_set('display_errors',1);
 class PayoutValidationModuleFrontController extends ModuleFrontController
 {
     /**
@@ -46,14 +45,14 @@ class PayoutValidationModuleFrontController extends ModuleFrontController
          * Get Order data .
          */
 		$context = Context::getContext();
-		$cust_id = $cart->id_customer;
+		//$cust_id = $cart->id_customer;
 		
 		$customer = $context->customer;
 		$cart_id = $cart->id;
 		$customer_id = $customer->id;
 		
-		$currency = $this->context->currency;
-        $total = (float)$cart->getOrderTotal(true, Cart::BOTH);
+		//$currency = $this->context->currency;
+       //$total = (float)$cart->getOrderTotal(true, Cart::BOTH);
 		
 
         /*
@@ -64,22 +63,18 @@ class PayoutValidationModuleFrontController extends ModuleFrontController
         Context::getContext()->currency = new Currency((int) Context::getContext()->cart->id_currency);
         Context::getContext()->language = new Language((int) Context::getContext()->customer->id_lang);
 
-        $secure_key = Context::getContext()->customer->secure_key;
+        //$secure_key = Context::getContext()->customer->secure_key;
 
-        if ($this->isValidOrder() === true) {
+        /* if ($this->isValidOrder() === true) {
             $payment_status = Configuration::get('PS_OS_PAYMENT');
             $message = null;
         } else {
             $payment_status = Configuration::get('PS_OS_ERROR');
-
-            /**
-             * Add a message to explain why the order has not been validated
-             */
             $message = $this->module->l('An error occurred while processing payment');
-        }
+        } */
 
-        $module_name = $this->module->displayName;
-        $currency_id = (int) Context::getContext()->currency->id;
+        //$module_name = $this->module->displayName;
+        //$currency_id = (int) Context::getContext()->currency->id;
 
         //$validateOrder = $this->module->validateOrder($cart_id, $payment_status, $total, $module_name, $message, array(), $currency_id, false, $secure_key);
 		
@@ -100,13 +95,11 @@ class PayoutValidationModuleFrontController extends ModuleFrontController
      */
     public function getStandardCheckoutFormFields($context)
     {
-		// https://www.kiddzworld.com/en/module/payout/confirmation
-		$notifyUrl = Configuration::get('PAYOUT_NOTIFY_URL');
+		//$notifyUrl = Configuration::get('PAYOUT_NOTIFY_URL');
 		$clientId = Configuration::get('PAYOUT_CLIENT_ID');
 		$secret = Configuration::get('PAYOUT_SECRET');
 		$sandbox = Configuration::get('PAYOUT_MODE');
-		//$clientId = 'a53f5407-d43c-4e59-846d-b7c21489a41a';//$this->getConfigData( 'payout_id' );
-		//$secret = 'y47H9GpVFu9rJexEkD5wU3osE6n07yaNXXJE2QVJ9z1RBFwHh8sR-65C3-0-dLUi';//$this->getConfigData( 'encryption_key' );
+		$productAttributes = array();
 		
 		$config = array(
 			'client_id' => $clientId,
@@ -114,7 +107,6 @@ class PayoutValidationModuleFrontController extends ModuleFrontController
 			'sandbox' => $sandbox
 		);
 		
-		//echo '<pre>';print_r($config);die;
 		require_once(dirname(__FILE__) . '/../../classes/init.php');
 		
 		$payout = new Client($config);
@@ -129,11 +121,11 @@ class PayoutValidationModuleFrontController extends ModuleFrontController
 		/********** format billing and shipping Address **********/
 		$delivery_address = $cart->id_address_delivery;
 		$invoice_address = $cart->id_address_invoice;
-		$dAddress = new Address(intval($delivery_address));
-		$iAddress = new Address(intval($invoice_address));
-		$billing_country_code = new Country(intval($iAddress->id_country));
+		$dAddress = new Address($delivery_address);
+		$iAddress = new Address($invoice_address);
+		$billing_country_code = new Country($iAddress->id_country);
 		$bcc = $billing_country_code->iso_code;
-		$shipping_country_code = new Country(intval($dAddress->id_country));
+		$shipping_country_code = new Country($dAddress->id_country);
 		$scc = $shipping_country_code->iso_code;
 		$billing_address = array(
 			'name' => $iAddress->firstname .' ' .$iAddress->lastname,
@@ -162,7 +154,7 @@ class PayoutValidationModuleFrontController extends ModuleFrontController
 			
 			);
 		}
-		//echo '<pre>';print_r($currency);die;
+		
 		$checkout_data = array(
 			'amount' => $total,
 			'currency' => $currency->iso_code,
@@ -182,8 +174,8 @@ class PayoutValidationModuleFrontController extends ModuleFrontController
 		$response = $payout->createCheckout($checkout_data);
 		
 		$checkoutUrl = $response->checkout_url;
-		header("Location: $checkoutUrl");
+		//header("Location: $checkoutUrl");
+		Tools::redirect($checkoutUrl);
 		exit(0);
-		//Tools::redirect('checkoutUrl');
     }
 }

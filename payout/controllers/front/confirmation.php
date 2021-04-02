@@ -23,14 +23,15 @@
 *  @license   http://opensource.org/licenses/afl-3.0.php  Academic Free License (AFL 3.0)
 *  International Registered Trademark & Property of PrestaShop SA
 */
+
 class PayoutConfirmationModuleFrontController extends ModuleFrontController
 {
     public function postProcess()
     {
-		if(!isset($_GET['cart_id'])){
+		if(!Tools::getIsset(Tools::getValue('cart_id'))){
 			return false;
 		}
-		$cart_id = $_GET['cart_id'];
+		$cart_id = Tools::getValue('cart_id');
 
         $cart = new Cart((int) $cart_id);
         $customer = new Customer((int) $cart->id_customer);
