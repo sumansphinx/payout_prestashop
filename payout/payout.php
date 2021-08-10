@@ -1,30 +1,30 @@
 <?php
 /**
-* 2007-2021 PrestaShop
-*
-* NOTICE OF LICENSE
-*
-* This source file is subject to the Academic Free License (AFL 3.0)
-* that is bundled with this package in the file LICENSE.txt.
-* It is also available through the world-wide-web at this URL:
-* http://opensource.org/licenses/afl-3.0.php
-* If you did not receive a copy of the license and are unable to
-* obtain it through the world-wide-web, please send an email
-* to license@prestashop.com so we can send you a copy immediately.
-*
-* DISCLAIMER
-*
-* Do not edit or add to this file if you wish to upgrade PrestaShop to newer
-* versions in the future. If you wish to customize PrestaShop for your
-* needs please refer to http://www.prestashop.com for more information.
-*
-*  @author    PrestaShop SA <contact@prestashop.com>
-*  @copyright 2007-2021 PrestaShop SA
-*  @license   http://opensource.org/licenses/afl-3.0.php  Academic Free License (AFL 3.0)
-*  International Registered Trademark & Property of PrestaShop SA
-*/
+ * 2007-2021 PrestaShop
+ *
+ * NOTICE OF LICENSE
+ *
+ * This source file is subject to the Academic Free License (AFL 3.0)
+ * that is bundled with this package in the file LICENSE.txt.
+ * It is also available through the world-wide-web at this URL:
+ * http://opensource.org/licenses/afl-3.0.php
+ * If you did not receive a copy of the license and are unable to
+ * obtain it through the world-wide-web, please send an email
+ * to license@prestashop.com so we can send you a copy immediately.
+ *
+ * DISCLAIMER
+ *
+ * Do not edit or add to this file if you wish to upgrade PrestaShop to newer
+ * versions in the future. If you wish to customize PrestaShop for your
+ * needs please refer to http://www.prestashop.com for more information.
+ *
+ * @author    PrestaShop SA <contact@prestashop.com>
+ * @copyright 2007-2021 PrestaShop SA
+ * @license   http://opensource.org/licenses/afl-3.0.php  Academic Free License (AFL 3.0)
+ *  International Registered Trademark & Property of PrestaShop SA
+ */
 
-if (!defined('_PS_VERSION_')) {
+if ( ! defined('_PS_VERSION_')) {
     exit;
 }
 
@@ -34,10 +34,10 @@ class Payout extends PaymentModule
 
     public function __construct()
     {
-        $this->name = 'payout';
-        $this->tab = 'payments_gateways';
-        $this->version = '1.0.0';
-        $this->author = 'Vinay Sikarwar';
+        $this->name          = 'payout';
+        $this->tab           = 'payments_gateways';
+        $this->version       = '1.0.0';
+        $this->author        = 'Payout';
         $this->need_instance = 0;
 
         /**
@@ -50,9 +50,9 @@ class Payout extends PaymentModule
         $this->displayName = $this->l('Payout Payment');
         $this->description = $this->l('Pay Via Payout Payment');
 
-        $this->confirmUninstall = $this->l('');
+        $this->confirmUninstall = $this->l('Are you sure?');
 
-        $this->limited_countries = array('SK');
+        $this->limited_countries = array('SK','BBY','BRE','BRO');
 
         $this->limited_currencies = array('EUR');
 
@@ -65,30 +65,30 @@ class Payout extends PaymentModule
      */
     public function install()
     {
-        if (extension_loaded('curl') == false)
-        {
+        if (extension_loaded('curl') == false) {
             $this->_errors[] = $this->l('You have to enable the cURL extension on your server to install this module');
+
             return false;
         }
 
         $iso_code = Country::getIsoById(Configuration::get('PS_COUNTRY_DEFAULT'));
 
-        if (in_array($iso_code, $this->limited_countries) == false)
-        {
+        if (in_array($iso_code, $this->limited_countries) == false) {
             $this->_errors[] = $this->l('This module is not available in your country');
+
             return false;
         }
 
         Configuration::updateValue('PAYOUT_LIVE_MODE', false);
 
         return parent::install() &&
-            $this->registerHook('header') &&
-            $this->registerHook('backOfficeHeader') &&
-            $this->registerHook('payment') &&
-            $this->registerHook('paymentReturn') &&
-            $this->registerHook('paymentOptions') &&
-            $this->registerHook('actionAdminPerformanceControllerSaveAfter') &&
-            $this->registerHook('displayPaymentReturn');
+               $this->registerHook('header') &&
+               $this->registerHook('backOfficeHeader') &&
+               $this->registerHook('payment') &&
+               $this->registerHook('paymentReturn') &&
+               $this->registerHook('paymentOptions') &&
+               $this->registerHook('actionAdminPerformanceControllerSaveAfter') &&
+               $this->registerHook('displayPaymentReturn');
     }
 
     public function uninstall()
@@ -112,9 +112,107 @@ class Payout extends PaymentModule
 
         $this->context->smarty->assign('module_dir', $this->_path);
 
-        $output = $this->context->smarty->fetch($this->local_path.'views/templates/admin/configure.tpl');
+        $output = $this->context->smarty->fetch($this->local_path . 'views/templates/admin/configure.tpl');
 
-        return $output.$this->renderForm();
+        return $output . $this->renderForm();
+    }
+
+    /**
+     * Add the CSS & JavaScript files you want to be loaded in the BO.
+     */
+    public function hookBackOfficeHeader()
+    {
+        if (Tools::getValue('module_name') == $this->name) {
+            $this->context->controller->addJS($this->_path . 'views/js/back.js');
+            $this->context->controller->addCSS($this->_path . 'views/css/back.css');
+        }
+    }
+
+    /**
+     * Add the CSS & JavaScript files you want to be added on the FO.
+     */
+    public function hookHeader()
+    {
+        $this->context->controller->addJS($this->_path . '/views/js/front.js');
+        $this->context->controller->addCSS($this->_path . '/views/css/front.css');
+    }
+
+    /**
+     * This hook is used to display the order confirmation page.
+     */
+    public function hookPaymentReturn($params)
+    {
+        if ($this->active == false) {
+            return;
+        }
+
+        $order = $params['objOrder'];
+
+        if ($order->getCurrentOrderState()->id != Configuration::get('PS_OS_ERROR')) {
+            $this->smarty->assign('status', 'ok');
+        }
+
+        $this->smarty->assign(
+            array(
+                'id_order'  => $order->id,
+                'reference' => $order->reference,
+                'params'    => $params,
+                'total'     => Tools::displayPrice($params['total_to_pay'], $params['currencyObj'], false),
+            )
+        );
+
+        return $this->display(__FILE__, 'views/templates/hook/confirmation.tpl');
+    }
+
+    /**
+     * Return payment options available for PS 1.7+
+     *
+     * @param array Hook parameters
+     *
+     * @return array|null
+     */
+    public function hookPaymentOptions($params)
+    {
+        if ( ! $this->active) {
+            return;
+        }
+        if ( ! $this->checkCurrency($params['cart'])) {
+            return;
+        }
+        $option = new \PrestaShop\PrestaShop\Core\Payment\PaymentOption();
+        $option->setCallToActionText($this->l('Pay via Payout'))
+               ->setAction($this->context->link->getModuleLink($this->name, 'validation', array(), true));
+
+        return [
+            $option
+        ];
+    }
+
+    public function checkCurrency($cart)
+    {
+        $currency_order    = new Currency($cart->id_currency);
+        $currencies_module = $this->getCurrency($cart->id_currency);
+        if (is_array($currencies_module)) {
+            foreach ($currencies_module as $currency_module) {
+                if ($currency_order->id == $currency_module['id_currency']) {
+                    return true;
+                }
+            }
+        }
+
+        return false;
+    }
+
+    public function hookActionAdminPerformanceControllerSaveAfter()
+    {
+        //die('test...');
+        /* Place your code here. */
+    }
+
+    public function hookDisplayPaymentReturn()
+    {
+        //die('test123...');
+        /* Place your code here. */
     }
 
     /**
@@ -124,22 +222,22 @@ class Payout extends PaymentModule
     {
         $helper = new HelperForm();
 
-        $helper->show_toolbar = false;
-        $helper->table = $this->table;
-        $helper->module = $this;
-        $helper->default_form_language = $this->context->language->id;
+        $helper->show_toolbar             = false;
+        $helper->table                    = $this->table;
+        $helper->module                   = $this;
+        $helper->default_form_language    = $this->context->language->id;
         $helper->allow_employee_form_lang = Configuration::get('PS_BO_ALLOW_EMPLOYEE_FORM_LANG', 0);
 
-        $helper->identifier = $this->identifier;
+        $helper->identifier    = $this->identifier;
         $helper->submit_action = 'submitPayoutModule';
-        $helper->currentIndex = $this->context->link->getAdminLink('AdminModules', false)
-            .'&configure='.$this->name.'&tab_module='.$this->tab.'&module_name='.$this->name;
-        $helper->token = Tools::getAdminTokenLite('AdminModules');
+        $helper->currentIndex  = $this->context->link->getAdminLink('AdminModules', false)
+                                 . '&configure=' . $this->name . '&tab_module=' . $this->tab . '&module_name=' . $this->name;
+        $helper->token         = Tools::getAdminTokenLite('AdminModules');
 
         $helper->tpl_vars = array(
             'fields_value' => $this->getConfigFormValues(), /* Add values for your inputs */
-            'languages' => $this->context->controller->getLanguages(),
-            'id_language' => $this->context->language->id,
+            'languages'    => $this->context->controller->getLanguages(),
+            'id_language'  => $this->context->language->id,
         );
 
         return $helper->generateForm(array($this->getConfigForm()));
@@ -150,69 +248,70 @@ class Payout extends PaymentModule
      */
     protected function getConfigForm()
     {
-		$context = Context::getContext();
+        $context = Context::getContext();
+
         return array(
             'form' => array(
                 'legend' => array(
-                'title' => $this->l('Settings'),
-                'icon' => 'icon-cogs',
+                    'title' => $this->l('Settings'),
+                    'icon'  => 'icon-cogs',
                 ),
-                'input' => array(
+                'input'  => array(
                     array(
-                        'type' => 'switch',
-                        'label' => $this->l('Live mode'),
-                        'name' => 'PAYOUT_LIVE_MODE',
+                        'type'    => 'switch',
+                        'label'   => $this->l('Live mode'),
+                        'name'    => 'PAYOUT_LIVE_MODE',
                         'is_bool' => true,
-                        'desc' => $this->l('Use this module in live mode'),
-                        'values' => array(
+                        'desc'    => $this->l('Use this module in live mode'),
+                        'values'  => array(
                             array(
-                                'id' => 'active_on',
+                                'id'    => 'active_on',
                                 'value' => true,
                                 'label' => $this->l('Enabled')
                             ),
                             array(
-                                'id' => 'active_off',
-                                'value' => false,
-                                'label' => $this->l('Disabled')
-                            )
-                        ),
-                    ),
-					array(
-                        'type' => 'switch',
-                        'label' => $this->l('Enable Sanbox'),
-                        'name' => 'PAYOUT_MODE',
-                        'is_bool' => true,
-                        'desc' => $this->l('Enable Sandbox Mode'),
-                        'values' => array(
-                            array(
-                                'id' => 'enabled',
-                                'value' => true,
-                                'label' => $this->l('Enabled')
-                            ),
-                            array(
-                                'id' => 'disabled',
+                                'id'    => 'active_off',
                                 'value' => false,
                                 'label' => $this->l('Disabled')
                             )
                         ),
                     ),
                     array(
-                        'col' => 3,
-                        'type' => 'text',
-                        'desc' => $this->l('Client Id'),
-                        'name' => 'PAYOUT_CLIENT_ID',
+                        'type'    => 'switch',
+                        'label'   => $this->l('Enable Sanbox'),
+                        'name'    => 'PAYOUT_MODE',
+                        'is_bool' => true,
+                        'desc'    => $this->l('Enable Sandbox Mode'),
+                        'values'  => array(
+                            array(
+                                'id'    => 'enabled',
+                                'value' => true,
+                                'label' => $this->l('Enabled')
+                            ),
+                            array(
+                                'id'    => 'disabled',
+                                'value' => false,
+                                'label' => $this->l('Disabled')
+                            )
+                        ),
+                    ),
+                    array(
+                        'col'   => 3,
+                        'type'  => 'text',
+                        'desc'  => $this->l('Client Id'),
+                        'name'  => 'PAYOUT_CLIENT_ID',
                         'label' => $this->l('Client Id'),
                     ),
                     array(
-                        'type' => 'text',
-                        'name' => 'PAYOUT_SECRET',
+                        'type'  => 'text',
+                        'name'  => 'PAYOUT_SECRET',
                         'label' => $this->l('Secret'),
                     ),
-					array(
-                        'type' => 'text',
-                        'name' => 'PAYOUT_NOTIFY_URL',
+                    array(
+                        'type'  => 'text',
+                        'name'  => 'PAYOUT_NOTIFY_URL',
                         'label' => $this->l('Notify Url'),
-						'value' => $context->shop->getBaseURL(true).'module/payout/confirmation'
+                        'value' => $context->shop->getBaseURL(true) . 'module/payout/confirmation'
                     ),
                 ),
                 'submit' => array(
@@ -228,12 +327,12 @@ class Payout extends PaymentModule
     protected function getConfigFormValues()
     {
         return array(
-            'PAYOUT_LIVE_MODE' => Configuration::get('PAYOUT_LIVE_MODE', true),
+            'PAYOUT_LIVE_MODE'     => Configuration::get('PAYOUT_LIVE_MODE', true),
             'PAYOUT_ACCOUNT_EMAIL' => Configuration::get('PAYOUT_ACCOUNT_EMAIL', 'contact@prestashop.com'),
-            'PAYOUT_MODE' => Configuration::get('PAYOUT_MODE', null),
-            'PAYOUT_NOTIFY_URL' => Configuration::get('PAYOUT_NOTIFY_URL', null),
-            'PAYOUT_CLIENT_ID' => Configuration::get('PAYOUT_CLIENT_ID', null),
-            'PAYOUT_SECRET' => Configuration::get('PAYOUT_SECRET', null),
+            'PAYOUT_MODE'          => Configuration::get('PAYOUT_MODE', null),
+            'PAYOUT_NOTIFY_URL'    => Configuration::get('PAYOUT_NOTIFY_URL', null),
+            'PAYOUT_CLIENT_ID'     => Configuration::get('PAYOUT_CLIENT_ID', null),
+            'PAYOUT_SECRET'        => Configuration::get('PAYOUT_SECRET', null),
         );
     }
 
@@ -247,100 +346,5 @@ class Payout extends PaymentModule
         foreach (array_keys($form_values) as $key) {
             Configuration::updateValue($key, Tools::getValue($key));
         }
-		
-    }
-
-    /**
-    * Add the CSS & JavaScript files you want to be loaded in the BO.
-    */
-    public function hookBackOfficeHeader()
-    {
-        if (Tools::getValue('module_name') == $this->name) {
-            $this->context->controller->addJS($this->_path.'views/js/back.js');
-            $this->context->controller->addCSS($this->_path.'views/css/back.css');
-        }
-    }
-
-    /**
-     * Add the CSS & JavaScript files you want to be added on the FO.
-     */
-    public function hookHeader()
-    {
-        $this->context->controller->addJS($this->_path.'/views/js/front.js');
-        $this->context->controller->addCSS($this->_path.'/views/css/front.css');
-    }
-
-    /**
-     * This hook is used to display the order confirmation page.
-     */
-    public function hookPaymentReturn($params)
-    {
-        if ($this->active == false)
-            return;
-
-        $order = $params['objOrder'];
-
-        if ($order->getCurrentOrderState()->id != Configuration::get('PS_OS_ERROR'))
-            $this->smarty->assign('status', 'ok');
-
-        $this->smarty->assign(array(
-            'id_order' => $order->id,
-            'reference' => $order->reference,
-            'params' => $params,
-            'total' => Tools::displayPrice($params['total_to_pay'], $params['currencyObj'], false),
-        ));
-
-        return $this->display(__FILE__, 'views/templates/hook/confirmation.tpl');
-    }
-
-    /**
-     * Return payment options available for PS 1.7+
-     *
-     * @param array Hook parameters
-     *
-     * @return array|null
-     */
-    public function hookPaymentOptions($params)
-    {
-        if (!$this->active) {
-            return;
-        }
-        if (!$this->checkCurrency($params['cart'])) {
-            return;
-        }
-        $option = new \PrestaShop\PrestaShop\Core\Payment\PaymentOption();
-        $option->setCallToActionText($this->l('Pay via Payout'))
-            ->setAction($this->context->link->getModuleLink($this->name, 'validation', array(), true));
-
-        return [
-            $option
-        ];
-    }
-
-
-    public function checkCurrency($cart)
-    {
-        $currency_order = new Currency($cart->id_currency);
-        $currencies_module = $this->getCurrency($cart->id_currency);
-        if (is_array($currencies_module)) {
-            foreach ($currencies_module as $currency_module) {
-                if ($currency_order->id == $currency_module['id_currency']) {
-                    return true;
-                }
-            }
-        }
-        return false;
-    }
-
-    public function hookActionAdminPerformanceControllerSaveAfter()
-    {
-		//die('test...');
-        /* Place your code here. */
-    }
-
-    public function hookDisplayPaymentReturn()
-    {
-		//die('test123...');
-        /* Place your code here. */
     }
 }

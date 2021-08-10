@@ -1,28 +1,28 @@
 <?php
 /**
-* 2007-2021 PrestaShop
-*
-* NOTICE OF LICENSE
-*
-* This source file is subject to the Academic Free License (AFL 3.0)
-* that is bundled with this package in the file LICENSE.txt.
-* It is also available through the world-wide-web at this URL:
-* http://opensource.org/licenses/afl-3.0.php
-* If you did not receive a copy of the license and are unable to
-* obtain it through the world-wide-web, please send an email
-* to license@prestashop.com so we can send you a copy immediately.
-*
-* DISCLAIMER
-*
-* Do not edit or add to this file if you wish to upgrade PrestaShop to newer
-* versions in the future. If you wish to customize PrestaShop for your
-* needs please refer to http://www.prestashop.com for more information.
-*
-*  @author    PrestaShop SA <contact@prestashop.com>
-*  @copyright 2007-2021 PrestaShop SA
-*  @license   http://opensource.org/licenses/afl-3.0.php  Academic Free License (AFL 3.0)
-*  International Registered Trademark & Property of PrestaShop SA
-*/
+ * 2007-2021 PrestaShop
+ *
+ * NOTICE OF LICENSE
+ *
+ * This source file is subject to the Academic Free License (AFL 3.0)
+ * that is bundled with this package in the file LICENSE.txt.
+ * It is also available through the world-wide-web at this URL:
+ * http://opensource.org/licenses/afl-3.0.php
+ * If you did not receive a copy of the license and are unable to
+ * obtain it through the world-wide-web, please send an email
+ * to license@prestashop.com so we can send you a copy immediately.
+ *
+ * DISCLAIMER
+ *
+ * Do not edit or add to this file if you wish to upgrade PrestaShop to newer
+ * versions in the future. If you wish to customize PrestaShop for your
+ * needs please refer to http://www.prestashop.com for more information.
+ *
+ * @author    PrestaShop SA <contact@prestashop.com>
+ * @copyright 2007-2021 PrestaShop SA
+ * @license   http://opensource.org/licenses/afl-3.0.php  Academic Free License (AFL 3.0)
+ *  International Registered Trademark & Property of PrestaShop SA
+ */
 
 class Connection
 {
@@ -44,16 +44,19 @@ class Connection
     public function __construct($base_url)
     {
         $this->base_url = $base_url;
-        $this->curl = curl_init();
+        $this->curl     = curl_init();
 
-        curl_setopt_array($this->curl, array(
-            CURLOPT_RETURNTRANSFER => true,
-            CURLOPT_ENCODING => '',
-            CURLOPT_MAXREDIRS => 10,
-            CURLOPT_TIMEOUT => 0,
-            CURLOPT_FOLLOWLOCATION => false,
-            CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1
-        ));
+        curl_setopt_array(
+            $this->curl,
+            array(
+                CURLOPT_RETURNTRANSFER => true,
+                CURLOPT_ENCODING       => '',
+                CURLOPT_MAXREDIRS      => 10,
+                CURLOPT_TIMEOUT        => 0,
+                CURLOPT_FOLLOWLOCATION => false,
+                CURLOPT_HTTP_VERSION   => CURL_HTTP_VERSION_1_1
+            )
+        );
     }
 
     /**
@@ -65,19 +68,6 @@ class Connection
     public function addHeader($header, $value)
     {
         $this->headers[$header] = "$header: $value";
-    }
-
-    /**
-     * Clear previously cached request data and prepare for
-     * making a fresh request.
-     */
-    private function initializeRequest()
-    {
-        $this->response = '';
-        $this->addHeader('Content-Type', self::TYPE_JSON);
-        $this->addHeader('Accept', self::TYPE_JSON);
-
-        curl_setopt($this->curl, CURLOPT_HTTPHEADER, $this->headers);
     }
 
     /**
@@ -95,10 +85,12 @@ class Connection
     {
         $this->initializeRequest();
 
-        $credentials = json_encode(array(
-            'client_id' => $client_id,
-            'client_secret' => $client_secret
-        ));
+        $credentials = json_encode(
+            array(
+                'client_id'     => $client_id,
+                'client_secret' => $client_secret
+            )
+        );
 
         curl_setopt($this->curl, CURLOPT_URL, $this->base_url . $url);
         curl_setopt($this->curl, CURLOPT_POSTFIELDS, $credentials);
@@ -122,7 +114,7 @@ class Connection
         $this->addHeader('Authorization', 'Bearer ' . $this->token);
         $this->initializeRequest();
 
-        if (!is_string($body)) {
+        if ( ! is_string($body)) {
             $body = json_encode($body);
         }
 
@@ -164,6 +156,19 @@ class Connection
     }
 
     /**
+     * Clear previously cached request data and prepare for
+     * making a fresh request.
+     */
+    private function initializeRequest()
+    {
+        $this->response = '';
+        $this->addHeader('Content-Type', self::TYPE_JSON);
+        $this->addHeader('Accept', self::TYPE_JSON);
+
+        curl_setopt($this->curl, CURLOPT_HTTPHEADER, $this->headers);
+    }
+
+    /**
      * Check the response for possible errors and handle the response body returned.
      *
      * @return mixed the value encoded in json in appropriate PHP type.
@@ -178,7 +183,7 @@ class Connection
         $response = json_decode($this->response);
 
         if (isset($response->errors)) {
-            throw new Exception('Payout error: ' . $response->errors);
+            throw new Exception('Payout error: ' . json_encode($response));
         }
 
         if (isset($response->token)) {
