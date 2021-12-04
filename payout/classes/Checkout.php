@@ -36,7 +36,7 @@ class Checkout
      */
     public function create($data)
     {
-        if ( ! is_array($data)) {
+        if (! is_array($data)) {
             throw new Exception('Payout error: Wrong checkout parameters.');
         }
 
@@ -49,7 +49,7 @@ class Checkout
         );
 
         foreach ($checkout_required as $required_attribute) {
-            if ( ! key_exists($required_attribute, $data)) {
+            if (! key_exists($required_attribute, $data)) {
                 throw new Exception("Payout error: Missing required parameter \"$required_attribute\".");
             }
         }
@@ -61,7 +61,7 @@ class Checkout
         );
 
         foreach ($customer_required as $required_attribute) {
-            if ( ! key_exists($required_attribute, $data['customer'])) {
+            if (! key_exists($required_attribute, $data['customer'])) {
                 throw new Exception("Payout error: Missing required parameter \"$required_attribute\".");
             }
         }

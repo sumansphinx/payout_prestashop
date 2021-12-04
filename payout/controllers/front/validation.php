@@ -35,10 +35,15 @@ class PayoutValidationModuleFrontController extends ModuleFrontController
         /*
          * If the module is not active anymore, no need to process anything.
          */
-
+        if (!($this->module instanceof Payout)) {
+            Tools::redirect('index.php?controller=order&step=1');
+            return;
+        }
         $cart = $this->context->cart;
 
-        if ($cart->id_customer == 0 || $cart->id_address_delivery == 0 || $cart->id_address_invoice == 0 || ! $this->module->active) {
+        if ($cart->id_customer == 0 ||
+            $cart->id_address_delivery == 0 ||
+            $cart->id_address_invoice == 0 || !$this->module->active) {
             Tools::redirect('index.php?controller=order&step=1');
         }
         /*
@@ -54,7 +59,11 @@ class PayoutValidationModuleFrontController extends ModuleFrontController
         //$currency = $this->context->currency;
         //$total = (float)$cart->getOrderTotal(true, Cart::BOTH);
 
-
+        //$to = new Cart((int)$cart_id);
+        // echo "<pre>";
+        // print_r($cart );
+        // echo '</pre>';
+        // die();
         /*
          * Restore the context from the $cart_id & the $customer_id to process the validation properly.
          */
@@ -76,7 +85,8 @@ class PayoutValidationModuleFrontController extends ModuleFrontController
         //$module_name = $this->module->displayName;
         //$currency_id = (int) Context::getContext()->currency->id;
 
-        //$validateOrder = $this->module->validateOrder($cart_id, $payment_status, $total, $module_name, $message, array(), $currency_id, false, $secure_key);
+        /*$validateOrder = $this->module->validateOrder($cart_id, $payment_status, $total,
+        $module_name, $message, array(), $currency_id, false, $secure_key);*/
 
         $this->getStandardCheckoutFormFields($context);
     }
@@ -108,8 +118,8 @@ class PayoutValidationModuleFrontController extends ModuleFrontController
         $currency = $this->context->currency;
         $total    = (float)$cart->getOrderTotal(true, Cart::BOTH);
 
-        $url = $context->shop->getBaseURL(true) . 'module/payout/confirmation?cart_id=' . $cart->id;
-
+        //$url = $context->shop->getBaseURL(true) . 'module/payout/confirmation?cart_id=' . $cart->id;
+        $url = $this->context->link->getModuleLink('payout', 'confirmation', ['cart_id' => $cart->id]);
         /********** format billing and shipping Address **********/
         $delivery_address      = $cart->id_address_delivery;
         $invoice_address       = $cart->id_address_invoice;
@@ -138,7 +148,14 @@ class PayoutValidationModuleFrontController extends ModuleFrontController
         );
 
         $products = $cart->getProducts(true);
+        //$subscription_flag = 0;
         foreach ($products as $product) {
+            // $validate_subscription_data = Db::getInstance()->ExecuteS(
+            //    'select subscription from ' . _DB_PREFIX_ . 'product where id_product='.$product["id_product"]
+            //);
+            // if ($validate_subscription_data[0]['subscription']!=0) {
+            //  $subscription_flag = 1;
+            // }
             $productAttributes[] = array(
                 'name'       => $product['name'],
                 'unit_price' => round($product['price_with_reduction'], 2),
@@ -158,13 +175,16 @@ class PayoutValidationModuleFrontController extends ModuleFrontController
             'billing_address'  => json_encode($billing_address),
             'shipping_address' => json_encode($shipping_address),
             'products'         => json_encode($productAttributes),
-            'external_id'      => $cart->id,
+            'external_id'      => $cart->id.'-'.time(),
             'redirect_url'     => $url
 
         );
-
+        // if($subscription_flag !=0) {
+        //   $checkout_data['mode'] = 'store_card';
+        // }
+        
         $response = $payout->createCheckout($checkout_data);
-
+        
         $checkoutUrl = $response->checkout_url;
         //header("Location: $checkoutUrl");
         Tools::redirect($checkoutUrl);

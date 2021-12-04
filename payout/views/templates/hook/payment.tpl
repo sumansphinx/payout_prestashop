@@ -21,22 +21,10 @@
 *  @copyright 2007-2021 PrestaShop SA
 *  @license   http://opensource.org/licenses/afl-3.0.php  Academic Free License (AFL 3.0)
 *  International Registered Trademark & Property of PrestaShop SA
-*}
-
-<div class="row">
-	<div class="col-xs-12 col-md-6">
-		<p class="payment_module" id="payout_payment_button">
-			{if $cart->getOrderTotal() < 2}
-				<a href="">
-					<img src="{$domain|cat:$payment_button|escape:'html':'UTF-8'}" alt="{l s='Pay with my payment module' mod='payout'}" />
-					{l s='Minimum amount required in order to pay with my payment module:' mod='payout'} {convertPrice price=2}
-				</a>
-			{else}
-				<a href="{$link->getModuleLink('payout', 'redirect', array(), true)|escape:'htmlall':'UTF-8'}" title="{l s='Pay with my payment module' mod='payout'}">
-					<img src="{$module_dir|escape:'htmlall':'UTF-8'}/logo.png" alt="{l s='Pay with my payment module' mod='payout'}" width="32" height="32" />
-					{l s='Pay with my payment module' mod='payout'}
-				</a>
-			{/if}
-		</p>
-	</div>
-</div>
+*}                       
+<p class="payment_module">
+	<a href="{$this_path_ssl|escape:'htmlall':'UTF-8'}" title="{l s='Pay by payout' mod='payout'}">
+		<img src="{$module_dir|escape:'htmlall':'UTF-8'}/logo.png" alt="{l s='Pay by payout' mod='payout'}" width="86" height="49"/>
+		{l s='Pay by Payout' mod='payout'}&nbsp;<span>{l s='' mod='payout'}</span>
+	</a>
+</p>
