@@ -26,30 +26,48 @@
 
 class PayoutConfirmationModuleFrontController extends ModuleFrontController
 {
+   
     public function postProcess()
     {
-        if ( ! Tools::getIsset(Tools::getValue('cart_id'))) {
-            return false;
+        // $notification_json = Tools::file_get_contents('php://input');
+        // $notification = json_decode($notification_json);
+        // $logger = new FileLogger(0); //0 == debug level, logDebug() won’t work without this.
+        // $logger->setFilename(_PS_ROOT_DIR_."/log/debug.log");
+        // $logger->logDebug($notification_json);
+      
+        if (!Tools::getIsset('cart_id')) {
+            $this->setTemplate('module:payout/views/templates/front/blank.tpl');
+            return;
         }
-        $cart_id = Tools::getValue('cart_id');
 
-        $cart = new Cart((int)$cart_id);
-        $customer = new Customer((int)$cart->id_customer);
-
+        if (!($this->module instanceof Payout)) {
+            Tools::redirect('index.php?controller=order&step=1');
+            return;
+        }
+        
         $secure_key = Context::getContext()->customer->secure_key;
-        /**
-         * Since it's an example we are validating the order right here,
-         * You should not do it this way in your own module.
-         */
+        $cart_id = Tools::getValue('cart_id');
+        
+        //For instant payment notification and converting the cart into valid order
+        // $cart= Context::getContext()->cart;
+        //$cart_id = Context::getContext()->cart->id;
         $payment_status = Configuration::get('PS_OS_PAYMENT'); // Default value for a payment that succeed.
-        $message        = null; // You can add a comment directly into the order so the merchant will see it in the BO.
-
-        /**
-         * Converting cart into a valid order
-         */
+        $message        = null; // add comment to show in BO.
         $module_name = $this->module->displayName;
-        $currency_id = (int)Context::getContext()->currency->id;
-
+        $currency_id = (int) Context::getContext()->cookie->id_currency;
+        $cart = new Cart((int)$cart_id);
+        if ($cart->id_customer == 0 ||
+            $cart->id_address_delivery == 0 ||
+            $cart->id_address_invoice == 0 ||
+            !$this->module->active) {
+            Tools::redirect('index.php?controller=order&step=1');
+        }
+        $customer = new Customer((int)$cart->id_customer);
+        if (!Validate::isLoadedObject($customer)) {
+            Tools::redirect('index.php?controller=order&step=1');
+        }
+            
+        
         $this->module->validateOrder(
             $cart_id,
             $payment_status,
@@ -61,20 +79,24 @@ class PayoutConfirmationModuleFrontController extends ModuleFrontController
             false,
             $secure_key
         );
-
+           
+       
         /**
          * If the order has been validated we try to retrieve it
          */
         $order_id = Order::getOrderByCartId((int)$cart->id);
-
+           
+           
         if ($order_id && ($secure_key == $customer->secure_key)) {
             /**
              * The order has been placed so we redirect the customer on the confirmation page.
              */
             $module_id = $this->module->id;
             Tools::redirect(
-                'index.php?controller=order-confirmation&id_cart=' . $cart_id . '&id_module=' . $module_id . '&id_order=' . $order_id . '&key=' . $secure_key
+                'index.php?controller=order-confirmation&id_cart=' . $cart_id . '&id_module=' . $module_id .
+                '&id_order=' . $order_id . '&key=' . $secure_key
             );
+            //die();
         } else {
             /*
              * An error occured and is shown on a new page.
@@ -82,8 +104,11 @@ class PayoutConfirmationModuleFrontController extends ModuleFrontController
             $this->errors[] = $this->module->l(
                 'An error occured. Please contact the merchant to have more informations'
             );
-
-            return $this->setTemplate('error.tpl');
+            $this->context->smarty->assign([
+                'errors' => $this->errors,
+            ]);
+            
+            $this->setTemplate('module:payout/views/templates/front/error.tpl');
         }
     }
 }

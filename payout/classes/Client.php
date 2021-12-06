@@ -35,7 +35,9 @@ class Client
      * @var string $token Obtained API access token
      * @var Connection $connection Connection instance
      */
-    private $config, $token, $connection;
+    private $config;
+    private $token;
+    private $connection;
 
     /**
      * Construct the Payout API Client.
@@ -46,10 +48,10 @@ class Client
      */
     public function __construct(array $config = array())
     {
-        if ( ! function_exists('curl_init')) {
+        if (!function_exists('curl_init')) {
             throw new Exception('Payout needs the CURL PHP extension.');
         }
-        if ( ! function_exists('json_decode')) {
+        if (!function_exists('json_decode')) {
             throw new Exception('Payout needs the JSON PHP extension.');
         }
 
@@ -123,7 +125,7 @@ class Client
 
         $response = $this->connection()->post('checkouts', $prepared_checkout);
 
-        if ( ! $this->verifySignature(
+        if (! $this->verifySignature(
             array($response->amount, $response->currency, $response->external_id, $response->nonce),
             $response->signature
         )) {
@@ -146,7 +148,7 @@ class Client
         $url      = 'checkouts/' . $checkout_id;
         $response = $this->connection()->get($url);
 
-        if ( ! $this->verifySignature(
+        if (! $this->verifySignature(
             array($response->amount, $response->currency, $response->external_id, $response->nonce),
             $response->signature
         )) {
@@ -166,7 +168,7 @@ class Client
      */
     private function connection()
     {
-        if ( ! $this->connection) {
+        if (! $this->connection) {
             $api_url          = ($this->config['sandbox']) ? self::API_URL_SANDBOX : self::API_URL;
             $this->connection = new Connection($api_url);
             $this->token      = $this->connection->authenticate(

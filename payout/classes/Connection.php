@@ -34,7 +34,11 @@ class Connection
      * @var array $headers HTTP request headers
      * @var mixed $response HTTP response
      */
-    private $base_url, $token, $curl, $headers = array(), $response;
+    private $base_url;
+    private $token;
+    private $curl;
+    private $headers = array();
+    private $response;
 
     /**
      * Connection constructor.
@@ -114,7 +118,7 @@ class Connection
         $this->addHeader('Authorization', 'Bearer ' . $this->token);
         $this->initializeRequest();
 
-        if ( ! is_string($body)) {
+        if (!is_string($body)) {
             $body = json_encode($body);
         }
 

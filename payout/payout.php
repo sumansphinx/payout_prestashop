@@ -24,7 +24,7 @@
  *  International Registered Trademark & Property of PrestaShop SA
  */
 
-if ( ! defined('_PS_VERSION_')) {
+if (! defined('_PS_VERSION_')) {
     exit;
 }
 
@@ -48,13 +48,14 @@ class Payout extends PaymentModule
         parent::__construct();
 
         $this->displayName = $this->l('Payout Payment');
+        
         $this->description = $this->l('Pay Via Payout Payment');
 
         $this->confirmUninstall = $this->l('Are you sure?');
 
-        $this->limited_countries = array('SK','BBY','BRE','BRO');
+        $this->limited_countries = array('SK','BBY','BRE','BRO','IN', 'US', 'GB');
 
-        $this->limited_currencies = array('EUR');
+        $this->limited_currencies = array('EUR', 'CZK', 'PLN', 'KES', 'HUF', 'HRK', 'RON');
 
         $this->ps_versions_compliancy = array('min' => '1.6', 'max' => _PS_VERSION_);
     }
@@ -79,8 +80,14 @@ class Payout extends PaymentModule
             return false;
         }
 
-        Configuration::updateValue('PAYOUT_LIVE_MODE', false);
-
+        Configuration::updateValue(
+            'PAYOUT_NOTIFY_URL',
+            $this->context->link->getModuleLink(
+                'payout',
+                'confirmation',
+                []
+            )
+        );
         return parent::install() &&
                $this->registerHook('header') &&
                $this->registerHook('backOfficeHeader') &&
@@ -88,15 +95,114 @@ class Payout extends PaymentModule
                $this->registerHook('paymentReturn') &&
                $this->registerHook('paymentOptions') &&
                $this->registerHook('actionAdminPerformanceControllerSaveAfter') &&
+               //$this->alterTable('add') &&
+               //$this->registerHook('actionAdminControllerSetMedia') &&
+               //$this->registerHook('actionProductUpdate') &&
+               //$this->registerHook('displayAdminProductsExtra') &&
                $this->registerHook('displayPaymentReturn');
+               //$this->registerHook('hookPaymentReturn');
     }
 
     public function uninstall()
     {
-        Configuration::deleteByName('PAYOUT_LIVE_MODE');
-
+        
+        //$this->alterTable('remove');
         return parent::uninstall();
     }
+
+
+
+
+    /***
+     * Alter table to add subscription
+     */
+
+    public function alterTable($method)
+    {
+        $sql = '';
+        switch ($method) {
+            case 'add':
+                $sql = 'ALTER TABLE ' . _DB_PREFIX_ . 'product  ADD `frequency` TEXT NULL DEFAULT NULL 
+                AFTER `state`, ADD `subscription` INT NOT NULL DEFAULT "0" AFTER `frequency`';
+                break;
+            case 'remove':
+                $sql = 'ALTER TABLE ' . _DB_PREFIX_ . 'product DROP COLUMN `frequency`, 
+                DROP COLUMN `subscription`';
+                break;
+        }
+        if ($sql !="") {
+            if (!Db::getInstance()->Execute($sql)) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    /**
+     * Create a tabbed interface in the product creation section of the backoffice
+     * @param type $params
+     * @return type
+     */
+        
+    public function hookDisplayAdminProductsExtra($params)
+    {
+        $product_id = $params['id_product'];
+        $subsc_info = array();
+        $result = Db::getInstance()->ExecuteS('SELECT frequency, subscription FROM '._DB_PREFIX_.'product 
+                                                WHERE id_product = ' . (int)$product_id);
+        $subsc_info['frequency'] ='';
+        $subsc_info['subscription'] =0;
+        if ($result && count($result) > 0) {
+            $subsc_info['frequency'] =$result[0]['frequency'];
+            $subsc_info['subscription'] =$result[0]['subscription'];
+        }
+
+        $this->context->smarty->assign(array(
+                    'subscription_info' => $subsc_info,
+                    'languages' => $this->context->controller->_languages,
+                    'default_language' => (int)Configuration::get('PS_LANG_DEFAULT')
+                ));
+                    
+        return $this->display(__FILE__, '/views/templates/admin/product_configure.tpl');
+    }
+
+        /*
+         * Add the js file in the product creation and updation page
+         */
+    public function hookActionAdminControllerSetMedia($params)
+    {
+        // add necessary javascript to products back office
+        // if ($this->context->controller->controller_name == 'AdminProducts' && Tools::getValue('id_product')) {
+        //$this->context->controller->addJS($this->_path.'/js/newfieldstut.js');
+        //}
+    }
+        
+    /*
+        * Update the recurring configuration from the product page
+    */
+    
+    public function hookActionProductUpdate($params)
+    {
+        $id_product = (int)Tools::getValue('id_product');
+        $subscription_status = Tools::getValue("subscription");
+        $frequency = Tools::getValue("frequency");
+        $sql = 'update '._DB_PREFIX_.'product set frequency="'.$frequency.'", subscription='.$subscription_status.
+                ' where id_product='.$id_product;
+        if (!Db::getInstance()->execute($sql)) {
+            $this->context->controller->_errors[] = Tools::displayError(
+                'Error: An error occurred while processing payment'
+            );
+        }
+    }
+
+    // public  function hookDisplayProductButtons() {
+    //     die("custom stop");
+    //     return "hello";
+    // }
+    // public function hookDisplayProductAdditionalInfo() {
+    //     //die("custom stop");
+    //     echo "hello";
+    // }
 
     /**
      * Load the configuration form
@@ -160,7 +266,7 @@ class Payout extends PaymentModule
                 'total'     => Tools::displayPrice($params['total_to_pay'], $params['currencyObj'], false),
             )
         );
-
+        //return $this->display(__FILE__, 'payment_return.tpl');
         return $this->display(__FILE__, 'views/templates/hook/confirmation.tpl');
     }
 
@@ -173,21 +279,42 @@ class Payout extends PaymentModule
      */
     public function hookPaymentOptions($params)
     {
-        if ( ! $this->active) {
+        
+        if (! $this->active) {
             return;
         }
-        if ( ! $this->checkCurrency($params['cart'])) {
+        
+        if (! $this->checkCurrency($params['cart'])) {
             return;
         }
         $option = new \PrestaShop\PrestaShop\Core\Payment\PaymentOption();
         $option->setCallToActionText($this->l('Pay via Payout'))
                ->setAction($this->context->link->getModuleLink($this->name, 'validation', array(), true));
-
         return [
             $option
         ];
     }
 
+    //compatibility for prestashop 1.6
+    public function hookPayment($params)
+    {
+        if (!$this->active) {
+            return;
+        }
+           
+        if (!$this->checkCurrency($params['cart'])) {
+            return;
+        }
+            
+
+        $this->smarty->assign(array(
+            'this_path' => $this->_path,
+            'this_path_bw' => $this->_path,
+            'this_path_ssl' => $this->context->link->getModuleLink($this->name, 'validation', array(), true)
+        ));
+        return $this->display(__FILE__, 'payment.tpl');
+    }
+    
     public function checkCurrency($cart)
     {
         $currency_order    = new Currency($cart->id_currency);
@@ -209,10 +336,28 @@ class Payout extends PaymentModule
         /* Place your code here. */
     }
 
-    public function hookDisplayPaymentReturn()
+    public function hookDisplayPaymentReturn($params)
     {
-        //die('test123...');
-        /* Place your code here. */
+        if (_PS_VERSION_ < 1.7) {
+            if ($this->active == false) {
+                return;
+            }
+        
+            $order = $params['objOrder'];
+            if ($order->getCurrentOrderState()->id != Configuration::get('PS_OS_ERROR')) {
+                $this->smarty->assign('status', 'ok');
+            }
+
+            $this->smarty->assign(
+                array(
+                    'id_order'  => $order->id,
+                    'reference' => $order->reference,
+                    'params'    => $params,
+                    'total'     => Tools::displayPrice($params['total_to_pay'], $params['currencyObj'], false),
+                )
+            );
+            return $this->display(__FILE__, 'views/templates/hook/confirmation.tpl');
+        }
     }
 
     /**
@@ -231,7 +376,8 @@ class Payout extends PaymentModule
         $helper->identifier    = $this->identifier;
         $helper->submit_action = 'submitPayoutModule';
         $helper->currentIndex  = $this->context->link->getAdminLink('AdminModules', false)
-                                 . '&configure=' . $this->name . '&tab_module=' . $this->tab . '&module_name=' . $this->name;
+                                 . '&configure=' . $this->name . '&tab_module=' . $this->tab . '&module_name='
+                                 . $this->name;
         $helper->token         = Tools::getAdminTokenLite('AdminModules');
 
         $helper->tpl_vars = array(
@@ -248,8 +394,8 @@ class Payout extends PaymentModule
      */
     protected function getConfigForm()
     {
-        $context = Context::getContext();
-
+        //$context = Context::getContext();
+        
         return array(
             'form' => array(
                 'legend' => array(
@@ -258,24 +404,14 @@ class Payout extends PaymentModule
                 ),
                 'input'  => array(
                     array(
-                        'type'    => 'switch',
-                        'label'   => $this->l('Live mode'),
-                        'name'    => 'PAYOUT_LIVE_MODE',
-                        'is_bool' => true,
-                        'desc'    => $this->l('Use this module in live mode'),
-                        'values'  => array(
-                            array(
-                                'id'    => 'active_on',
-                                'value' => true,
-                                'label' => $this->l('Enabled')
-                            ),
-                            array(
-                                'id'    => 'active_off',
-                                'value' => false,
-                                'label' => $this->l('Disabled')
-                            )
-                        ),
+                        'type'  => 'text',
+                        'required' => true,
+                        'readonly' => true,
+                        'name'  => 'PAYOUT_NOTIFY_URL',
+                        'label' => $this->l('Notify Url'),
+                        'value' => $this->context->link->getModuleLink('payout', 'confirmation', [])
                     ),
+                    
                     array(
                         'type'    => 'switch',
                         'label'   => $this->l('Enable Sanbox'),
@@ -298,21 +434,18 @@ class Payout extends PaymentModule
                     array(
                         'col'   => 3,
                         'type'  => 'text',
+                        'required' => true,
                         'desc'  => $this->l('Client Id'),
                         'name'  => 'PAYOUT_CLIENT_ID',
                         'label' => $this->l('Client Id'),
                     ),
                     array(
                         'type'  => 'text',
+                        'required' => true,
                         'name'  => 'PAYOUT_SECRET',
                         'label' => $this->l('Secret'),
                     ),
-                    array(
-                        'type'  => 'text',
-                        'name'  => 'PAYOUT_NOTIFY_URL',
-                        'label' => $this->l('Notify Url'),
-                        'value' => $context->shop->getBaseURL(true) . 'module/payout/confirmation'
-                    ),
+                    
                 ),
                 'submit' => array(
                     'title' => $this->l('Save'),
@@ -327,8 +460,8 @@ class Payout extends PaymentModule
     protected function getConfigFormValues()
     {
         return array(
-            'PAYOUT_LIVE_MODE'     => Configuration::get('PAYOUT_LIVE_MODE', true),
-            'PAYOUT_ACCOUNT_EMAIL' => Configuration::get('PAYOUT_ACCOUNT_EMAIL', 'contact@prestashop.com'),
+           
+            'PAYOUT_ACCOUNT_EMAIL' => Configuration::get('PAYOUT_ACCOUNT_EMAIL', 'contact@payout.one'),
             'PAYOUT_MODE'          => Configuration::get('PAYOUT_MODE', null),
             'PAYOUT_NOTIFY_URL'    => Configuration::get('PAYOUT_NOTIFY_URL', null),
             'PAYOUT_CLIENT_ID'     => Configuration::get('PAYOUT_CLIENT_ID', null),
