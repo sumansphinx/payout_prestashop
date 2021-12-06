@@ -1,4 +1,5 @@
 <?php
+
 /**
  * 2007-2021 PrestaShop
  *
@@ -24,7 +25,7 @@
  *  International Registered Trademark & Property of PrestaShop SA
  */
 
-if (! defined('_PS_VERSION_')) {
+if (!defined('_PS_VERSION_')) {
     exit;
 }
 
@@ -48,12 +49,12 @@ class Payout extends PaymentModule
         parent::__construct();
 
         $this->displayName = $this->l('Payout Payment');
-        
+
         $this->description = $this->l('Pay Via Payout Payment');
 
         $this->confirmUninstall = $this->l('Are you sure?');
 
-        $this->limited_countries = array('SK','BBY','BRE','BRO','IN', 'US', 'GB');
+        $this->limited_countries = array('SK', 'BBY', 'BRE', 'BRO', 'IN', 'US', 'GB', 'CZE', 'HUN', 'POL', 'HRV', 'ROU');
 
         $this->limited_currencies = array('EUR', 'CZK', 'PLN', 'KES', 'HUF', 'HRK', 'RON');
 
@@ -89,23 +90,23 @@ class Payout extends PaymentModule
             )
         );
         return parent::install() &&
-               $this->registerHook('header') &&
-               $this->registerHook('backOfficeHeader') &&
-               $this->registerHook('payment') &&
-               $this->registerHook('paymentReturn') &&
-               $this->registerHook('paymentOptions') &&
-               $this->registerHook('actionAdminPerformanceControllerSaveAfter') &&
-               //$this->alterTable('add') &&
-               //$this->registerHook('actionAdminControllerSetMedia') &&
-               //$this->registerHook('actionProductUpdate') &&
-               //$this->registerHook('displayAdminProductsExtra') &&
-               $this->registerHook('displayPaymentReturn');
-               //$this->registerHook('hookPaymentReturn');
+            $this->registerHook('header') &&
+            $this->registerHook('backOfficeHeader') &&
+            $this->registerHook('payment') &&
+            $this->registerHook('paymentReturn') &&
+            $this->registerHook('paymentOptions') &&
+            $this->registerHook('actionAdminPerformanceControllerSaveAfter') &&
+            //$this->alterTable('add') &&
+            //$this->registerHook('actionAdminControllerSetMedia') &&
+            //$this->registerHook('actionProductUpdate') &&
+            //$this->registerHook('displayAdminProductsExtra') &&
+            $this->registerHook('displayPaymentReturn');
+        //$this->registerHook('hookPaymentReturn');
     }
 
     public function uninstall()
     {
-        
+
         //$this->alterTable('remove');
         return parent::uninstall();
     }
@@ -122,15 +123,15 @@ class Payout extends PaymentModule
         $sql = '';
         switch ($method) {
             case 'add':
-                $sql = 'ALTER TABLE ' . _DB_PREFIX_ . 'product  ADD `frequency` TEXT NULL DEFAULT NULL 
+                $sql = 'ALTER TABLE ' . _DB_PREFIX_ . 'product  ADD `frequency` TEXT NULL DEFAULT NULL
                 AFTER `state`, ADD `subscription` INT NOT NULL DEFAULT "0" AFTER `frequency`';
                 break;
             case 'remove':
-                $sql = 'ALTER TABLE ' . _DB_PREFIX_ . 'product DROP COLUMN `frequency`, 
+                $sql = 'ALTER TABLE ' . _DB_PREFIX_ . 'product DROP COLUMN `frequency`,
                 DROP COLUMN `subscription`';
                 break;
         }
-        if ($sql !="") {
+        if ($sql != "") {
             if (!Db::getInstance()->Execute($sql)) {
                 return false;
             }
@@ -143,30 +144,30 @@ class Payout extends PaymentModule
      * @param type $params
      * @return type
      */
-        
+
     public function hookDisplayAdminProductsExtra($params)
     {
         $product_id = $params['id_product'];
         $subsc_info = array();
-        $result = Db::getInstance()->ExecuteS('SELECT frequency, subscription FROM '._DB_PREFIX_.'product 
+        $result = Db::getInstance()->ExecuteS('SELECT frequency, subscription FROM ' . _DB_PREFIX_ . 'product
                                                 WHERE id_product = ' . (int)$product_id);
-        $subsc_info['frequency'] ='';
-        $subsc_info['subscription'] =0;
+        $subsc_info['frequency'] = '';
+        $subsc_info['subscription'] = 0;
         if ($result && count($result) > 0) {
-            $subsc_info['frequency'] =$result[0]['frequency'];
-            $subsc_info['subscription'] =$result[0]['subscription'];
+            $subsc_info['frequency'] = $result[0]['frequency'];
+            $subsc_info['subscription'] = $result[0]['subscription'];
         }
 
         $this->context->smarty->assign(array(
-                    'subscription_info' => $subsc_info,
-                    'languages' => $this->context->controller->_languages,
-                    'default_language' => (int)Configuration::get('PS_LANG_DEFAULT')
-                ));
-                    
+            'subscription_info' => $subsc_info,
+            'languages' => $this->context->controller->_languages,
+            'default_language' => (int)Configuration::get('PS_LANG_DEFAULT')
+        ));
+
         return $this->display(__FILE__, '/views/templates/admin/product_configure.tpl');
     }
 
-        /*
+    /*
          * Add the js file in the product creation and updation page
          */
     public function hookActionAdminControllerSetMedia($params)
@@ -176,18 +177,18 @@ class Payout extends PaymentModule
         //$this->context->controller->addJS($this->_path.'/js/newfieldstut.js');
         //}
     }
-        
+
     /*
         * Update the recurring configuration from the product page
     */
-    
+
     public function hookActionProductUpdate($params)
     {
         $id_product = (int)Tools::getValue('id_product');
         $subscription_status = Tools::getValue("subscription");
         $frequency = Tools::getValue("frequency");
-        $sql = 'update '._DB_PREFIX_.'product set frequency="'.$frequency.'", subscription='.$subscription_status.
-                ' where id_product='.$id_product;
+        $sql = 'update ' . _DB_PREFIX_ . 'product set frequency="' . $frequency . '", subscription=' . $subscription_status .
+            ' where id_product=' . $id_product;
         if (!Db::getInstance()->execute($sql)) {
             $this->context->controller->_errors[] = Tools::displayError(
                 'Error: An error occurred while processing payment'
@@ -279,17 +280,17 @@ class Payout extends PaymentModule
      */
     public function hookPaymentOptions($params)
     {
-        
-        if (! $this->active) {
+
+        if (!$this->active) {
             return;
         }
-        
-        if (! $this->checkCurrency($params['cart'])) {
+
+        if (!$this->checkCurrency($params['cart'])) {
             return;
         }
         $option = new \PrestaShop\PrestaShop\Core\Payment\PaymentOption();
         $option->setCallToActionText($this->l('Pay via Payout'))
-               ->setAction($this->context->link->getModuleLink($this->name, 'validation', array(), true));
+            ->setAction($this->context->link->getModuleLink($this->name, 'validation', array(), true));
         return [
             $option
         ];
@@ -301,11 +302,11 @@ class Payout extends PaymentModule
         if (!$this->active) {
             return;
         }
-           
+
         if (!$this->checkCurrency($params['cart'])) {
             return;
         }
-            
+
 
         $this->smarty->assign(array(
             'this_path' => $this->_path,
@@ -314,7 +315,7 @@ class Payout extends PaymentModule
         ));
         return $this->display(__FILE__, 'payment.tpl');
     }
-    
+
     public function checkCurrency($cart)
     {
         $currency_order    = new Currency($cart->id_currency);
@@ -342,7 +343,7 @@ class Payout extends PaymentModule
             if ($this->active == false) {
                 return;
             }
-        
+
             $order = $params['objOrder'];
             if ($order->getCurrentOrderState()->id != Configuration::get('PS_OS_ERROR')) {
                 $this->smarty->assign('status', 'ok');
@@ -376,8 +377,8 @@ class Payout extends PaymentModule
         $helper->identifier    = $this->identifier;
         $helper->submit_action = 'submitPayoutModule';
         $helper->currentIndex  = $this->context->link->getAdminLink('AdminModules', false)
-                                 . '&configure=' . $this->name . '&tab_module=' . $this->tab . '&module_name='
-                                 . $this->name;
+            . '&configure=' . $this->name . '&tab_module=' . $this->tab . '&module_name='
+            . $this->name;
         $helper->token         = Tools::getAdminTokenLite('AdminModules');
 
         $helper->tpl_vars = array(
@@ -395,7 +396,7 @@ class Payout extends PaymentModule
     protected function getConfigForm()
     {
         //$context = Context::getContext();
-        
+
         return array(
             'form' => array(
                 'legend' => array(
@@ -411,7 +412,7 @@ class Payout extends PaymentModule
                         'label' => $this->l('Notify Url'),
                         'value' => $this->context->link->getModuleLink('payout', 'confirmation', [])
                     ),
-                    
+
                     array(
                         'type'    => 'switch',
                         'label'   => $this->l('Enable Sanbox'),
@@ -445,7 +446,7 @@ class Payout extends PaymentModule
                         'name'  => 'PAYOUT_SECRET',
                         'label' => $this->l('Secret'),
                     ),
-                    
+
                 ),
                 'submit' => array(
                     'title' => $this->l('Save'),
@@ -460,7 +461,7 @@ class Payout extends PaymentModule
     protected function getConfigFormValues()
     {
         return array(
-           
+
             'PAYOUT_ACCOUNT_EMAIL' => Configuration::get('PAYOUT_ACCOUNT_EMAIL', 'contact@payout.one'),
             'PAYOUT_MODE'          => Configuration::get('PAYOUT_MODE', null),
             'PAYOUT_NOTIFY_URL'    => Configuration::get('PAYOUT_NOTIFY_URL', null),
