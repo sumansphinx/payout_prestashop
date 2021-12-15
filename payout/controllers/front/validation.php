@@ -120,7 +120,9 @@ class PayoutValidationModuleFrontController extends ModuleFrontController
 
         //$url = $context->shop->getBaseURL(true) . 'module/payout/confirmation?cart_id=' . $cart->id;
         $url = $this->context->link->getModuleLink('payout', 'confirmation', ['cart_id' => $cart->id]);
+       //echo $url = $this->context->link->getModuleLink('payout', 'webhook', ['cart_id' => $cart->id]);
         /********** format billing and shipping Address **********/
+        $external_id =  $cart->id.'-'.time();
         $delivery_address      = $cart->id_address_delivery;
         $invoice_address       = $cart->id_address_invoice;
         $dAddress              = new Address($delivery_address);
@@ -148,22 +150,42 @@ class PayoutValidationModuleFrontController extends ModuleFrontController
         );
 
         $products = $cart->getProducts(true);
-        //$subscription_flag = 0;
+        $subscription_flag = 0;
         foreach ($products as $product) {
-            // $validate_subscription_data = Db::getInstance()->ExecuteS(
-            //    'select subscription from ' . _DB_PREFIX_ . 'product where id_product='.$product["id_product"]
-            //);
-            // if ($validate_subscription_data[0]['subscription']!=0) {
-            //  $subscription_flag = 1;
-            // }
+            $sqls = 'select subscription, frequency from ' . _DB_PREFIX_ . 'product where 
+            id_product='.$product["id_product"];
+             $validate_subscription_data = Db::getInstance()->ExecuteS($sqls);
+            if ($validate_subscription_data[0]['subscription'] != 0) {
+                $subscription_flag = 1;
+            }
             $productAttributes[] = array(
                 'name'       => $product['name'],
                 'unit_price' => round($product['price_with_reduction'], 2),
                 'quantity'   => $product['cart_quantity'],
 
             );
+            
+            if ($subscription_flag == 1) {
+                $nextRecurringDate = $this->module->getNextRecurringDate($validate_subscription_data[0]['frequency']);
+                $to_store_in_subscription = array();
+                $to_store_in_subscription['id_customer'] = $customer->id;
+                $to_store_in_subscription['id_product'] = $product['id_product'];
+                $to_store_in_subscription['id_product_attribute'] = $product['id_product_attribute'];
+                $to_store_in_subscription['quantity'] = $product['cart_quantity'];
+                $to_store_in_subscription['frequency'] = $validate_subscription_data[0]['frequency'];
+                $to_store_in_subscription['id_currency'] = $currency->id;
+                $to_store_in_subscription['id_lang'] = $context->language->id;
+                $to_store_in_subscription['id_external'] = $external_id;
+                $to_store_in_subscription['status'] = "initiated";
+                $to_store_in_subscription['last_payment_status'] = "initiated";
+                $to_store_in_subscription['last_payment_amount'] = round($product['price_with_reduction'], 2);
+                $to_store_in_subscription['created_at'] = date("Y-m-d H:i:s");
+                $to_store_in_subscription['updated_at'] = date("Y-m-d H:i:s");
+                $to_store_in_subscription['last_recurring_date'] = date("Y-m-d H:i:s");
+                $to_store_in_subscription['next_recurring_date'] = $nextRecurringDate;
+                Db::getInstance()->insert('payout_subscription_product', $to_store_in_subscription);
+            }
         }
-
         $checkout_data = array(
             'amount'           => $total,
             'currency'         => $currency->iso_code,
@@ -172,19 +194,19 @@ class PayoutValidationModuleFrontController extends ModuleFrontController
                 'last_name'  => $customer->lastname,
                 'email'      => $customer->email
             ],
-            'billing_address'  => json_encode($billing_address),
-            'shipping_address' => json_encode($shipping_address),
-            'products'         => json_encode($productAttributes),
-            'external_id'      => $cart->id.'-'.time(),
+            'billing_address'  => $billing_address,
+            'shipping_address' => $shipping_address,
+            'products'         => $productAttributes,
+            'external_id'      => $external_id,
             'redirect_url'     => $url
 
         );
-        // if($subscription_flag !=0) {
-        //   $checkout_data['mode'] = 'store_card';
-        // }
+        if ($subscription_flag !=0) {
+            $checkout_data['mode'] = 'store_card';
+        }
+        
         
         $response = $payout->createCheckout($checkout_data);
-        
         $checkoutUrl = $response->checkout_url;
         //header("Location: $checkoutUrl");
         Tools::redirect($checkoutUrl);

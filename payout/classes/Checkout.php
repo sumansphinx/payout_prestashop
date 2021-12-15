@@ -65,7 +65,7 @@ class Checkout
                 throw new Exception("Payout error: Missing required parameter \"$required_attribute\".");
             }
         }
-
+        
         $checkout_data = array(
             'amount'       => number_format($data['amount'] * 100, 0, '.', ''), // Amount in cents
             'currency'     => $data['currency'],
@@ -81,28 +81,30 @@ class Checkout
             'signature'    => ''
         );
 
-        if (isset($data['metadata']) && is_array($data['metadata'])) {
+        if (isset($data['metadata'])) {
             $checkout_data['metadata'] = $data['metadata'];
         }
-        if (isset($data['billing_address']) && is_array($data['billing_address'])) {
+        if (isset($data['billing_address'])) {
             $checkout_data['billing_address'] = $data['billing_address'];
         }
-        if (isset($data['shipping_address']) && is_array($data['shipping_address'])) {
+        if (isset($data['shipping_address'])) {
             $checkout_data['shipping_address'] = $data['shipping_address'];
         }
-        if (isset($data['products']) && is_array($data['products'])) {
+        if (isset($data['products'])) {
             $checkout_data['products'] = $data['products'];
         }
-        if (isset($data['idempotency_key']) && is_array($data['idempotency_key'])) {
+        if (isset($data['idempotency_key'])) {
             $checkout_data['idempotency_key'] = $data['idempotency_key'];
         }
-        if (isset($data['mode']) && is_array($data['mode'])) {
+        //if (isset($data['mode']) && is_array($data['mode'])) {
+        if (isset($data['mode'])) {
             $checkout_data['mode'] = $data['mode'];
         }
-        if (isset($data['recurrent_token']) && is_array($data['recurrent_token'])) {
+        //if (isset($data['recurrent_token']) && is_array($data['recurrent_token'])) {
+        if (isset($data['recurrent_token'])) {
             $checkout_data['recurrent_token'] = $data['recurrent_token'];
         }
-
+        
         return $checkout_data;
     }
 }

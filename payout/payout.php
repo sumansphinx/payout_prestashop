@@ -79,34 +79,43 @@ class Payout extends PaymentModule
 
             return false;
         }
+        Configuration::updateValue('PAYOUT_LIVE_MODE', false);
+        
 
         Configuration::updateValue(
             'PAYOUT_NOTIFY_URL',
             $this->context->link->getModuleLink(
                 'payout',
-                'confirmation',
+                'webhook',
                 []
             )
         );
+        include_once($this->local_path.'sql/install.php');
         return parent::install() &&
-               $this->registerHook('header') &&
-               $this->registerHook('backOfficeHeader') &&
-               $this->registerHook('payment') &&
-               $this->registerHook('paymentReturn') &&
-               $this->registerHook('paymentOptions') &&
-               $this->registerHook('actionAdminPerformanceControllerSaveAfter') &&
-               //$this->alterTable('add') &&
-               //$this->registerHook('actionAdminControllerSetMedia') &&
-               //$this->registerHook('actionProductUpdate') &&
-               //$this->registerHook('displayAdminProductsExtra') &&
-               $this->registerHook('displayPaymentReturn');
-               //$this->registerHook('hookPaymentReturn');
+            $this->registerHook('header') &&
+            $this->registerHook('backOfficeHeader') &&
+            $this->registerHook('payment') &&
+            $this->registerHook('paymentReturn') &&
+            $this->registerHook('paymentOptions') &&
+            $this->registerHook('actionAdminPerformanceControllerSaveAfter') &&
+            $this->alterTable('add') &&
+            $this->registerHook('actionAdminControllerSetMedia') &&
+            $this->registerHook('actionProductUpdate') &&
+            $this->registerHook('displayAdminProductsExtra') &&
+            $this->registerHook('displayPaymentReturn') &&
+            $this->registerHook('displayReassurance') &&
+            $this->registerHook('displayProductPriceBlock') &&
+            $this->registerHook('displayProductAdditionalInfo') &&
+            $this->registerHook('hookPaymentReturn') &&
+            $this->registerHook('displayCustomerAccount');
     }
 
     public function uninstall()
     {
-        
-        //$this->alterTable('remove');
+        Configuration::deleteByName('PAYOUT_LIVE_MODE');
+        Configuration::deleteByName('PAYOUT_NOTIFY_URL');
+        include_once($this->local_path.'sql/uninstall.php');
+        $this->alterTable('remove');
         return parent::uninstall();
     }
 
@@ -126,8 +135,8 @@ class Payout extends PaymentModule
                 AFTER `state`, ADD `subscription` INT NOT NULL DEFAULT "0" AFTER `frequency`';
                 break;
             case 'remove':
-                $sql = 'ALTER TABLE ' . _DB_PREFIX_ . 'product DROP COLUMN `frequency`, 
-                DROP COLUMN `subscription`';
+                $sql = 'ALTER TABLE ' . _DB_PREFIX_ . 'product DROP COLUMN IF EXISTS `frequency`, 
+                DROP COLUMN IF EXISTS  `subscription`';
                 break;
         }
         if ($sql !="") {
@@ -195,14 +204,33 @@ class Payout extends PaymentModule
         }
     }
 
-    // public  function hookDisplayProductButtons() {
-    //     die("custom stop");
-    //     return "hello";
-    // }
-    // public function hookDisplayProductAdditionalInfo() {
-    //     //die("custom stop");
-    //     echo "hello";
-    // }
+    public function hookDisplayProductPriceBlock($params)
+    {
+        //return $this->display(__FILE__, 'views/templates/hook/displayReoccuranceData.tpl');
+    }
+
+    public function hookDisplayProductAdditionalInfo()
+    {
+        $id_product = (int) Tools::getValue("id_product");
+        $sql = 'select frequency, subscription from ' . _DB_PREFIX_ . 'product where id_product = '.$id_product;
+        $subscription_data = Db::getInstance()->executeS($sql);
+        
+        
+        if ($subscription_data[0]['subscription']==1) {
+            $this->smarty->assign(
+                array(
+                    'frequency'  => $subscription_data[0]['frequency'],
+                )
+            );
+            return $this->display(__FILE__, 'views/templates/hook/displayReoccuranceData.tpl');
+        }
+        return false;
+    }
+     
+    public function hookDisplayReassurance($params)
+    {
+        //To display content in reassurance section
+    }
 
     /**
      * Load the configuration form
@@ -215,8 +243,9 @@ class Payout extends PaymentModule
         if (((bool)Tools::isSubmit('submitPayoutModule')) == true) {
             $this->postProcess();
         }
-
+        $cronURL = $this->context->link->getModuleLink('payout', 'cron', []);
         $this->context->smarty->assign('module_dir', $this->_path);
+        $this->context->smarty->assign('cron_url', $cronURL);
 
         $output = $this->context->smarty->fetch($this->local_path . 'views/templates/admin/configure.tpl');
 
@@ -409,7 +438,7 @@ class Payout extends PaymentModule
                         'readonly' => true,
                         'name'  => 'PAYOUT_NOTIFY_URL',
                         'label' => $this->l('Notify Url'),
-                        'value' => $this->context->link->getModuleLink('payout', 'confirmation', [])
+                        'value' => $this->context->link->getModuleLink('payout', 'webhook', [])
                     ),
                     
                     array(
@@ -479,5 +508,42 @@ class Payout extends PaymentModule
         foreach (array_keys($form_values) as $key) {
             Configuration::updateValue($key, Tools::getValue($key));
         }
+    }
+
+    /**
+     * Add Subscription page at customer Account.
+     */
+    public function hookDisplayCustomerAccount()
+    {
+            $context = Context::getContext();
+            $id_customer = $context->customer->id;
+
+            $url = Context::getContext()->link->getModuleLink($this->name, 'history', [], true);
+            
+            $this->context->smarty->assign([
+                'front_controller' => $url,
+                'id_customer' => $id_customer,
+                'ps_version' => $this->version,
+            ]);
+
+            return $this->display(dirname(__FILE__), '/views/templates/front/customerAccount.tpl');
+    }
+    
+    public function getNextRecurringDate($frequency)
+    {
+        switch ($frequency) {
+            case 'weekly':
+                $next_date = date("Y-m-d H:i:s", strtotime("+7 day"));
+                break;
+            case 'monthly':
+                $next_date = date("Y-m-d H:i:s", strtotime("+30 day"));
+                break;
+            case 'yearly':
+                $next_date = date("Y-m-d H:i:s", strtotime("+365 day"));
+                break;
+            default:
+                $next_date = date("Y-m-d H:i:s", strtotime("+7 day"));
+        }
+        return $next_date;
     }
 }

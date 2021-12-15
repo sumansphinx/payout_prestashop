@@ -25,3 +25,31 @@
 * Don't forget to prefix your containers with your own identifier
 * to avoid any conflicts with others containers.
 */
+$(window).ready(function(){
+    $(".payout_subscription_label").click(function(){
+        var id_subscription = $(this).attr("data-id");
+        var action = $(this).attr("data-action");
+        var frequency = $(this).attr("data-frequency");
+        $.ajax({
+            data: 'POST',
+            dataType: 'JSON',
+            url: payout_ajax_front_controller,
+            data: {
+                ajax: true,
+                action: action,
+                id: id_subscription,
+                frequency: frequency
+            },
+            success: function (data) {
+                if(data){
+                    window.location.href = window.location.href;
+                }else{
+                    console.log("There is some issue.");
+                }
+            },
+            error: function (err) {
+                console.log(err);
+            }
+        });  
+    });
+});
