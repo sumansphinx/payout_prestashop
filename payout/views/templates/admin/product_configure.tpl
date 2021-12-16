@@ -29,6 +29,7 @@
   <div class="form-group form-group-products form-group-stripepro">
     <input type="hidden" name="payout_submit" value="1" />
    		<label class="control-label col-lg-4" for="simple_product" style="float:left;color: #6c868e;">
+
         <span title="{l s='' mod='payout'}" class="label-tooltip" data-toggle="tooltip" title="">
 			 {l s='Enable Recurring Payments' mod='payout'}:
              </span>
@@ -66,9 +67,7 @@
 		</div>
     </div>
     <div class="form-group pull-left" style="width:100%;float:left;">
-    <div class="col-lg-4" style="float:left;"></div>
-    <div class="col-lg-8" style="float:left;">
-     
-        </div>
-        </div>
+		<div class="col-lg-4" style="float:left;"></div>
+		<div class="col-lg-8" style="float:left;"></div>
+	</div>
 </div>

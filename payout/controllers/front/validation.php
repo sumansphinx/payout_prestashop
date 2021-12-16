@@ -56,14 +56,7 @@ class PayoutValidationModuleFrontController extends ModuleFrontController
         $cart_id     = $cart->id;
         $customer_id = $customer->id;
 
-        //$currency = $this->context->currency;
-        //$total = (float)$cart->getOrderTotal(true, Cart::BOTH);
-
-        //$to = new Cart((int)$cart_id);
-        // echo "<pre>";
-        // print_r($cart );
-        // echo '</pre>';
-        // die();
+        
         /*
          * Restore the context from the $cart_id & the $customer_id to process the validation properly.
          */
@@ -71,22 +64,6 @@ class PayoutValidationModuleFrontController extends ModuleFrontController
         Context::getContext()->customer = new Customer((int)$customer_id);
         Context::getContext()->currency = new Currency((int)Context::getContext()->cart->id_currency);
         Context::getContext()->language = new Language((int)Context::getContext()->customer->id_lang);
-
-        //$secure_key = Context::getContext()->customer->secure_key;
-
-        /* if ($this->isValidOrder() === true) {
-            $payment_status = Configuration::get('PS_OS_PAYMENT');
-            $message = null;
-        } else {
-            $payment_status = Configuration::get('PS_OS_ERROR');
-            $message = $this->module->l('An error occurred while processing payment');
-        } */
-
-        //$module_name = $this->module->displayName;
-        //$currency_id = (int) Context::getContext()->currency->id;
-
-        /*$validateOrder = $this->module->validateOrder($cart_id, $payment_status, $total,
-        $module_name, $message, array(), $currency_id, false, $secure_key);*/
 
         $this->getStandardCheckoutFormFields($context);
     }
@@ -118,9 +95,9 @@ class PayoutValidationModuleFrontController extends ModuleFrontController
         $currency = $this->context->currency;
         $total    = (float)$cart->getOrderTotal(true, Cart::BOTH);
 
-        //$url = $context->shop->getBaseURL(true) . 'module/payout/confirmation?cart_id=' . $cart->id;
+        
         $url = $this->context->link->getModuleLink('payout', 'confirmation', ['cart_id' => $cart->id]);
-       //echo $url = $this->context->link->getModuleLink('payout', 'webhook', ['cart_id' => $cart->id]);
+       
         /********** format billing and shipping Address **********/
         $external_id =  $cart->id.'-'.time();
         $delivery_address      = $cart->id_address_delivery;
