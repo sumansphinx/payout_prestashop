@@ -53,7 +53,9 @@ class Payout extends PaymentModule
 
         $this->confirmUninstall = $this->l('Are you sure?');
 
-        $this->limited_countries = array('SK','BBY','BRE','BRO','IN', 'US', 'GB');
+        $this->limited_countries = array('sk', 'SK', 'bby', 'BBY', 'bre', 'BRE', 'bro', 'BRO', 'in', 'IN', 'us', 
+        'US', 'gb', 'GB', 'cze', 'CZE', 'cz', 'CZ', 'hun', 'HUN', 'hu', 'HU', 'pol', 'POL', 'pl', 'PL', 'hrv', 'HRV', 
+        'hr', 'HR', 'rou', 'ROU', 'ro', 'RO');
 
         $this->limited_currencies = array('EUR', 'CZK', 'PLN', 'KES', 'HUF', 'HRK', 'RON');
 
