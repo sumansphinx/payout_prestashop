@@ -27,13 +27,6 @@
 class PayoutConfirmationModuleFrontController extends ModuleFrontController
 {
     
-    public function printr($data)
-    {
-        echo "<pre>";
-        print_r($data);
-        echo "</pre>";
-    }
-    
     public function postProcess()
     {
         if (!($this->module instanceof Payout)) {
