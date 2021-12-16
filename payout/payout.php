@@ -55,7 +55,7 @@ class Payout extends PaymentModule
 
         $this->limited_countries = array('SK','BBY','BRE','BRO','IN', 'US', 'GB');
 
-        $this->limited_currencies = array('EUR');
+        $this->limited_currencies = array('EUR', 'CZK', 'PLN', 'KES', 'HUF', 'HRK', 'RON');
 
         $this->ps_versions_compliancy = array('min' => '1.6', 'max' => _PS_VERSION_);
     }
