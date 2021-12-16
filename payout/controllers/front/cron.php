@@ -138,7 +138,7 @@ class PayoutCronModuleFrontController extends ModuleFrontController
 
                     );
                 }
-
+                $user_token = $this->module->decryptToken($pd['user_token']);
                 $checkout_data = array(
                     'amount'           => $total,
                     'currency'         => $currency->iso_code,
@@ -153,13 +153,13 @@ class PayoutCronModuleFrontController extends ModuleFrontController
                     'external_id'       => $cart->id.'-'.time(),
                     'redirect_url'      => $url,
                     'mode'              => 'recurrent',
-                    'recurrent_token'   => $pd['user_token'],
+                    'recurrent_token'   => $user_token,
                     'recurrent_log_id'  => $pd['id_payout_subscription_product'],
                     'recurrent_order_id'=> $pd['id_order'],
                 );
                 
                 $this->updateExternalId($pd['id_payout_subscription_product'], $checkout_data['external_id']);
-                
+               
                 $payout->createCheckout($checkout_data);
 
                 $context->cookie->id_cart = null;

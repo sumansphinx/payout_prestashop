@@ -82,8 +82,16 @@ class Payout extends PaymentModule
             return false;
         }
         Configuration::updateValue('PAYOUT_LIVE_MODE', false);
-        
-
+        Configuration::updateValue(
+            'PAYOUT_RANDOM_CHAR',
+            Tools::substr(
+                str_shuffle(
+                    '0123456789abcdefghijklmnopqrstuvwxyz'
+                ),
+                0,
+                8
+            )
+        );
         Configuration::updateValue(
             'PAYOUT_NOTIFY_URL',
             $this->context->link->getModuleLink(
@@ -137,8 +145,8 @@ class Payout extends PaymentModule
                 AFTER `state`, ADD `subscription` INT NOT NULL DEFAULT "0" AFTER `frequency`';
                 break;
             case 'remove':
-                $sql = 'ALTER TABLE ' . _DB_PREFIX_ . 'product DROP COLUMN IF EXISTS `frequency`, 
-                DROP COLUMN IF EXISTS  `subscription`';
+                $sql = 'ALTER TABLE ' . _DB_PREFIX_ . 'product DROP COLUMN `frequency`, 
+                DROP COLUMN  `subscription`';
                 break;
         }
         if ($sql !="") {
@@ -177,19 +185,16 @@ class Payout extends PaymentModule
         return $this->display(__FILE__, '/views/templates/admin/product_configure.tpl');
     }
 
-        /*
-         * Add the js file in the product creation and updation page
-         */
+    /*
+    * Add the js file in the product creation and updation page
+    */
     public function hookActionAdminControllerSetMedia($params)
     {
         // add necessary javascript to products back office
-        // if ($this->context->controller->controller_name == 'AdminProducts' && Tools::getValue('id_product')) {
-        //$this->context->controller->addJS($this->_path.'/js/newfieldstut.js');
-        //}
     }
         
     /*
-        * Update the recurring configuration from the product page
+    * Update the recurring configuration from the product page
     */
     
     public function hookActionProductUpdate($params)
@@ -248,7 +253,6 @@ class Payout extends PaymentModule
         $cronURL = $this->context->link->getModuleLink('payout', 'cron', []);
         $this->context->smarty->assign('module_dir', $this->_path);
         $this->context->smarty->assign('cron_url', $cronURL);
-
         $output = $this->context->smarty->fetch($this->local_path . 'views/templates/admin/configure.tpl');
 
         return $output . $this->renderForm();
@@ -297,7 +301,7 @@ class Payout extends PaymentModule
                 'total'     => Tools::displayPrice($params['total_to_pay'], $params['currencyObj'], false),
             )
         );
-        //return $this->display(__FILE__, 'payment_return.tpl');
+        
         return $this->display(__FILE__, 'views/templates/hook/confirmation.tpl');
     }
 
@@ -336,8 +340,7 @@ class Payout extends PaymentModule
         if (!$this->checkCurrency($params['cart'])) {
             return;
         }
-            
-
+    
         $this->smarty->assign(array(
             'this_path' => $this->_path,
             'this_path_bw' => $this->_path,
@@ -363,7 +366,6 @@ class Payout extends PaymentModule
 
     public function hookActionAdminPerformanceControllerSaveAfter()
     {
-        //die('test...');
         /* Place your code here. */
     }
 
@@ -425,8 +427,6 @@ class Payout extends PaymentModule
      */
     protected function getConfigForm()
     {
-        //$context = Context::getContext();
-        
         return array(
             'form' => array(
                 'legend' => array(
@@ -519,9 +519,7 @@ class Payout extends PaymentModule
     {
             $context = Context::getContext();
             $id_customer = $context->customer->id;
-
             $url = Context::getContext()->link->getModuleLink($this->name, 'history', [], true);
-            
             $this->context->smarty->assign([
                 'front_controller' => $url,
                 'id_customer' => $id_customer,
@@ -547,5 +545,36 @@ class Payout extends PaymentModule
                 $next_date = date("Y-m-d H:i:s", strtotime("+7 day"));
         }
         return $next_date;
+    }
+    /**
+     * Encrypt function
+     *
+     * @param [type] $token
+     * @return void
+     */
+    public function encryptToken($token)
+    {
+        $ciphering = "BF-CBC";
+        $options = 0;
+        $encryption_iv = Configuration::get('PAYOUT_RANDOM_CHAR');
+        $encryption_key = openssl_digest(php_uname(), 'MD5', true);
+        $encryption = openssl_encrypt($token, $ciphering, $encryption_key, $options, $encryption_iv);
+        return $encryption;
+    }
+
+    /**
+     * Decrypt Token
+     *
+     * @param [type] $token
+     * @return void
+     */
+    public function decryptToken($token)
+    {
+        $ciphering = "BF-CBC";
+        $options = 0;
+        $decryption_iv = Configuration::get('PAYOUT_RANDOM_CHAR');
+        $decryption_key = openssl_digest(php_uname(), 'MD5', true);
+        $decryption = openssl_decrypt($token, $ciphering, $decryption_key, $options, $decryption_iv);
+        return $decryption;
     }
 }

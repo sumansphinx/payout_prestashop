@@ -24,17 +24,13 @@
 *}
 
 <!-- Nav tabs -->
-
 <ul class="nav nav-tabs" role="tablist">
 	<li class="active"><a href="#template_1" role="tab" data-toggle="tab">Cron URL</a></li>
 	
 </ul>
 
-
 <!-- Tab panes -->
 <div class="tab-content">
 	<div class="tab-pane active" id="template_1">{include file='./template_1.tpl'}</div>
-
 	
 </div>
-

@@ -41,11 +41,14 @@ class PayoutWebhookModuleFrontController extends ModuleFrontController
             $notification_data = Tools::file_get_contents('php://input');
             $webhook_data = json_decode($notification_data, true);
             $external_id = $webhook_data['external_id'];
+            
             if ($webhook_data['type'] == 'payu_token.created') {
                 $user_token = $webhook_data['data']['token_value'];
+                $user_token = $this->module->encryptToken($user_token);
                 $data_to_update = 'update ' . _DB_PREFIX_ . 'payout_subscription_product set 
                 user_token="' . $user_token . '" where id_external="' . $external_id . '"';
                 Db::getInstance()->execute($data_to_update);
+                
                 $validateLog = Db::getInstance()->executeS('select * from ' . _DB_PREFIX_ . 'payout_log where
                 external_id = "' . $external_id . '" and type="card"');
                 if (isset($validateLog) && count($validateLog) > 0) {
@@ -85,35 +88,30 @@ class PayoutWebhookModuleFrontController extends ModuleFrontController
                 $last_payment_amount = $webhook_data['data']['amount'];
                 $last_payment_status = $webhook_data['data']['payment']['status'];
                 $status = "pending";
+                //get frequency for next recurring date
+                $frequency_sql = 'select frequency from ' . _DB_PREFIX_ . 'product where id_product = 
+                (select id_product from ' . _DB_PREFIX_ . 'payout_subscription_product where 
+                id_external="'.$external_id.'")';
+                $frequency_data = Db::getInstance()->executeS($frequency_sql);
+                $frequency = $frequency_data[0]['frequency'];
+                
+                $next_recurring_date = $this->module->getNextRecurringDate($frequency);
                 $sql_update = 'update ' . _DB_PREFIX_ . 'payout_subscription_product set 
                 last_payment_amount=' . $last_payment_amount . ', last_payment_status="' . $last_payment_status . '", 
-                status="' . $status . '", updated_at="' . date("Y-m-d H:i:s") . '" 
-                where id_external="' . $external_id . '"';
+                status="' . $status . '", updated_at="' . date("Y-m-d H:i:s") . '",
+                next_recurring_date="' . $next_recurring_date . '" where id_external="' . $external_id . '"';
                 Db::getInstance()->execute($sql_update);
 
                 $order_id = Order::getOrderByCartId((int) $cart_id);
                 if (!$order_id) {
                     $cart = new Cart((int) $cart_id);
-                    //echo $secure_key = Context::getContext()->customer->secure_key;
-                    //echo $secure_key = Context::getContext()->customer->secure_key;
                     $customer = new Customer((int) $cart->id_customer);
                     $secure_key = $customer->secure_key;
                     $payment_status = Configuration::get('PS_OS_PAYMENT'); // Default value for a payment that succeed.
                     $message = null; // add comment to show in BO.
                     $module_name = $this->module->displayName;
                     $currency_id = $cart->id_currency;
-                    if ($cart->id_customer == 0 ||
-                            $cart->id_address_delivery == 0 ||
-                            $cart->id_address_invoice == 0 ||
-                            !$this->module->active) {
-                        //Tools::redirect('index.php?controller=order&step=1');
-                    }
-
-                    if (!Validate::isLoadedObject($customer)) {
-                        //Tools::redirect('index.php?controller=order&step=1');
-                    }
-
-
+                    
                     $this->module->validateOrder(
                         $cart_id,
                         $payment_status,

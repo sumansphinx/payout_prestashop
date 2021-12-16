@@ -55,8 +55,6 @@ class PayoutConfirmationModuleFrontController extends ModuleFrontController
                 die();
             } else {
                 $cart = new Cart((int)$cart_id);
-                //echo $secure_key = Context::getContext()->customer->secure_key;
-                //echo $secure_key = Context::getContext()->customer->secure_key;
                 $customer = new Customer((int)$cart->id_customer);
                 $secure_key = $customer->secure_key;
                 $payment_status = Configuration::get('PS_OS_PAYMENT'); // Default value for a payment that succeed.

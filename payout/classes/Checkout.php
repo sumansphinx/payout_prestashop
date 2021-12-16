@@ -74,7 +74,6 @@ class Checkout
                 'last_name'  => $data['customer']['last_name'],
                 'email'      => $data['customer']['email']
             ],
-            //'external_id' => strval($data['external_id']),
             'external_id'  => $data['external_id'],
             'nonce'        => '',
             'redirect_url' => $data['redirect_url'],
@@ -96,11 +95,10 @@ class Checkout
         if (isset($data['idempotency_key'])) {
             $checkout_data['idempotency_key'] = $data['idempotency_key'];
         }
-        //if (isset($data['mode']) && is_array($data['mode'])) {
+
         if (isset($data['mode'])) {
             $checkout_data['mode'] = $data['mode'];
         }
-        //if (isset($data['recurrent_token']) && is_array($data['recurrent_token'])) {
         if (isset($data['recurrent_token'])) {
             $checkout_data['recurrent_token'] = $data['recurrent_token'];
         }

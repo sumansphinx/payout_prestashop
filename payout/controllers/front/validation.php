@@ -50,8 +50,6 @@ class PayoutValidationModuleFrontController extends ModuleFrontController
          * Get Order data .
          */
         $context = Context::getContext();
-        //$cust_id = $cart->id_customer;
-
         $customer    = $context->customer;
         $cart_id     = $cart->id;
         $customer_id = $customer->id;
@@ -74,7 +72,7 @@ class PayoutValidationModuleFrontController extends ModuleFrontController
      */
     public function getStandardCheckoutFormFields($context)
     {
-        //$notifyUrl = Configuration::get('PAYOUT_NOTIFY_URL');
+        
         $clientId          = Configuration::get('PAYOUT_CLIENT_ID');
         $secret            = Configuration::get('PAYOUT_SECRET');
         $sandbox           = Configuration::get('PAYOUT_MODE');
@@ -184,8 +182,7 @@ class PayoutValidationModuleFrontController extends ModuleFrontController
         
         
         $response = $payout->createCheckout($checkout_data);
-        $checkoutUrl = $response->checkout_url;
-        //header("Location: $checkoutUrl");
+        $checkoutUrl = $response->checkout_url;        
         Tools::redirect($checkoutUrl);
         exit(0);
     }
