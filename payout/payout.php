@@ -82,16 +82,7 @@ class Payout extends PaymentModule
             return false;
         }
         Configuration::updateValue('PAYOUT_LIVE_MODE', false);
-        Configuration::updateValue(
-            'PAYOUT_RANDOM_CHAR',
-            Tools::substr(
-                str_shuffle(
-                    '0123456789abcdefghijklmnopqrstuvwxyz'
-                ),
-                0,
-                8
-            )
-        );
+        
         Configuration::updateValue(
             'PAYOUT_NOTIFY_URL',
             $this->context->link->getModuleLink(
@@ -244,6 +235,8 @@ class Payout extends PaymentModule
      */
     public function getContent()
     {
+        
+        
         /**
          * If values have been submitted in the form, process.
          */
@@ -556,7 +549,7 @@ class Payout extends PaymentModule
     {
         $ciphering = "BF-CBC";
         $options = 0;
-        $encryption_iv = Configuration::get('PAYOUT_RANDOM_CHAR');
+        $encryption_iv = $this->encdecCode();
         $encryption_key = openssl_digest(php_uname(), 'MD5', true);
         $encryption = openssl_encrypt($token, $ciphering, $encryption_key, $options, $encryption_iv);
         return $encryption;
@@ -572,9 +565,19 @@ class Payout extends PaymentModule
     {
         $ciphering = "BF-CBC";
         $options = 0;
-        $decryption_iv = Configuration::get('PAYOUT_RANDOM_CHAR');
+        $decryption_iv = $this->encdecCode();
         $decryption_key = openssl_digest(php_uname(), 'MD5', true);
         $decryption = openssl_decrypt($token, $ciphering, $decryption_key, $options, $decryption_iv);
         return $decryption;
+    }
+
+    /**
+     * Generate decryption iv from secret
+     */
+    public function encdecCode()
+    {
+        $config = require _PS_CACHE_DIR_ . 'appParameters.php';
+        $secret_key = $config['parameters']['secret'];
+        return Tools::substr($secret_key, 0, 8);
     }
 }
