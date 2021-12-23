@@ -50,20 +50,12 @@ class PayoutValidationModuleFrontController extends ModuleFrontController
          * Get Order data .
          */
         $context = Context::getContext();
-        //$cust_id = $cart->id_customer;
-
+        
         $customer    = $context->customer;
         $cart_id     = $cart->id;
         $customer_id = $customer->id;
 
-        //$currency = $this->context->currency;
-        //$total = (float)$cart->getOrderTotal(true, Cart::BOTH);
-
-        //$to = new Cart((int)$cart_id);
-        // echo "<pre>";
-        // print_r($cart );
-        // echo '</pre>';
-        // die();
+        
         /*
          * Restore the context from the $cart_id & the $customer_id to process the validation properly.
          */
