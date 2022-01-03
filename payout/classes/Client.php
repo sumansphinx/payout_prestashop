@@ -105,27 +105,40 @@ class Client
     public function createCheckout($data)
     {
         $checkout = new Checkout();
-
         $prepared_checkout = $checkout->create($data);
 
-        $nonce                      = $this->generateNonce();
+        $nonce = $this->generateNonce();
         $prepared_checkout['nonce'] = $nonce;
 
-        $message                        = array(
+        $message = array(
             $prepared_checkout['amount'],
             $prepared_checkout['currency'],
             $prepared_checkout['external_id'],
             $nonce,
             $this->config['client_secret']
         );
-        $signature                      = $this->getSignature($message);
+        $signature = $this->getSignature($message);
         $prepared_checkout['signature'] = $signature;
 
         $prepared_checkout = json_encode($prepared_checkout);
-
+        
         $response = $this->connection()->post('checkouts', $prepared_checkout);
 
-        if (! $this->verifySignature(
+        if (array_key_exists('mode', $data)) {
+            if ($data['mode'] == 'recurrent') {
+                $this->log(array(
+                    'id_payout_subscription_product' => $data['recurrent_log_id'],
+                    'id_order'                       => $data['recurrent_order_id'],
+                    'payment_amount'                 => $data['amount'],
+                    'id_external'                    => $data['external_id'],
+                    'currency'                       => $data['currency'],
+                    'request_data'                   => $prepared_checkout,
+                    'response_data'                  => json_encode($response)
+                ));
+            }
+        }
+
+        if (!$this->verifySignature(
             array($response->amount, $response->currency, $response->external_id, $response->nonce),
             $response->signature
         )) {
@@ -148,7 +161,7 @@ class Client
         $url      = 'checkouts/' . $checkout_id;
         $response = $this->connection()->get($url);
 
-        if (! $this->verifySignature(
+        if (!$this->verifySignature(
             array($response->amount, $response->currency, $response->external_id, $response->nonce),
             $response->signature
         )) {
@@ -209,5 +222,19 @@ class Client
         $hash  = base64_encode($bytes);
 
         return $hash;
+    }
+
+
+    /**
+    * Insert Log
+    */
+    public function log($data)
+    {
+        $sql = "INSERT INTO "._DB_PREFIX_."payout_subscription_logs(id_payout_subscription_product,id_order,
+        id_external,payment_amount,currency,payment_status,web_request_data,web_response_data,created_at)
+         VALUES (".$data['id_payout_subscription_product'].",".$data['id_order'].",'".$data['id_external'].
+         "','".$data['payment_amount']."','".$data['currency']."','pending','".$data['request_data'].
+         "','".$data['response_data']."','".date('Y-m-d H:i:s')."')";
+        Db::getInstance()->execute($sql);
     }
 }

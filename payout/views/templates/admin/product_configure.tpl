@@ -29,7 +29,7 @@
   <div class="form-group form-group-products form-group-stripepro">
     <input type="hidden" name="payout_submit" value="1" />
    		<label class="control-label col-lg-4" for="simple_product" style="float:left;color: #6c868e;">
-        <span title="{l s='By enabling this, payout will add the selected subscription on this product order.' mod='payout'}" class="label-tooltip" data-toggle="tooltip" title="">
+        <span title="{l s='' mod='payout'}" class="label-tooltip" data-toggle="tooltip" title="">
 			 {l s='Enable Recurring Payments' mod='payout'}:
              </span>
 		</label>

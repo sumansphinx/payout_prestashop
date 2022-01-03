@@ -26,10 +26,53 @@
 
 $sql = array();
 
-$sql[] = 'CREATE TABLE IF NOT EXISTS `' . _DB_PREFIX_ . 'payout` (
-    `id_payout` int(11) NOT NULL AUTO_INCREMENT,
-    PRIMARY KEY  (`id_payout`)
+$sql[] = 'CREATE TABLE IF NOT EXISTS `' . _DB_PREFIX_ . 'payout_subscription_product` (
+    `id_payout_subscription_product` int(11) NOT NULL AUTO_INCREMENT,
+    `id_order` int(11) NOT NULL DEFAULT 1,
+    `id_customer` int(11) NOT NULL DEFAULT 1,
+    `user_token` text DEFAULT NULL,
+    `id_product` int(11) NOT NULL DEFAULT 1,
+    `id_product_attribute` int(11) NOT NULL DEFAULT 1,
+    `quantity` int(11) NOT NULL DEFAULT 1,
+    `status` varchar(30) DEFAULT "",
+    `frequency` varchar(30) DEFAULT "",
+    `last_payment_amount`  varchar(30) DEFAULT "",
+    `last_payment_status`  varchar(30) DEFAULT "",
+    `id_currency`  int(11) NOT NULL DEFAULT 1,
+    `id_lang`  int(11) NOT NULL DEFAULT 1,
+    `id_external` varchar(50) DEFAULT NULL,
+    `last_recurring_date` datetime DEFAULT NULL,
+    `next_recurring_date` datetime DEFAULT NULL,
+    `created_at` datetime DEFAULT NULL,
+    `updated_at` datetime DEFAULT NULL,
+    PRIMARY KEY  (`id_payout_subscription_product`)
 ) ENGINE=' . _MYSQL_ENGINE_ . ' DEFAULT CHARSET=utf8;';
+
+$sql[] = 'CREATE TABLE IF NOT EXISTS `' . _DB_PREFIX_ . 'payout_subscription_logs` (
+    `id_payout_subscription_logs` int(11) NOT NULL AUTO_INCREMENT,
+    `id_payout_subscription_product` int(11) NOT NULL DEFAULT 1,
+    `id_order` int(11) NOT NULL DEFAULT 1,
+    `payment_amount` varchar(30) DEFAULT "",
+    `id_payment_transaction` text DEFAULT "",
+    `id_external` varchar(50) DEFAULT NULL,
+    `payment_status` varchar(30) DEFAULT "",
+    `currency`  varchar(30) DEFAULT "",
+    `web_request_data` text DEFAULT NULL,
+    `webhook_response_data` text DEFAULT NULL,
+    `web_response_data` text DEFAULT NULL,
+    `created_at` datetime DEFAULT NULL,
+    PRIMARY KEY  (`id_payout_subscription_logs`)
+) ENGINE=' . _MYSQL_ENGINE_ . ' DEFAULT CHARSET=utf8;';
+
+$sql[] = 'CREATE TABLE IF NOT EXISTS `' . _DB_PREFIX_ . 'payout_log` (
+  `id_log` bigint(20) NOT NULL,
+  `response_data` text NOT NULL,
+  `cart_id` int(11) NOT NULL,
+  `external_id` varchar(50) DEFAULT NULL,
+  `type` varchar(10) NOT NULL,
+  `date_added` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP 
+) ENGINE=' . _MYSQL_ENGINE_ . ' DEFAULT CHARSET=utf8;';
+
 
 foreach ($sql as $query) {
     if (Db::getInstance()->execute($query) == false) {

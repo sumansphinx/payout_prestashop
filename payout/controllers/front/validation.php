@@ -50,20 +50,12 @@ class PayoutValidationModuleFrontController extends ModuleFrontController
          * Get Order data .
          */
         $context = Context::getContext();
-        //$cust_id = $cart->id_customer;
-
+        
         $customer    = $context->customer;
         $cart_id     = $cart->id;
         $customer_id = $customer->id;
 
-        //$currency = $this->context->currency;
-        //$total = (float)$cart->getOrderTotal(true, Cart::BOTH);
-
-        //$to = new Cart((int)$cart_id);
-        // echo "<pre>";
-        // print_r($cart );
-        // echo '</pre>';
-        // die();
+        
         /*
          * Restore the context from the $cart_id & the $customer_id to process the validation properly.
          */
@@ -71,22 +63,6 @@ class PayoutValidationModuleFrontController extends ModuleFrontController
         Context::getContext()->customer = new Customer((int)$customer_id);
         Context::getContext()->currency = new Currency((int)Context::getContext()->cart->id_currency);
         Context::getContext()->language = new Language((int)Context::getContext()->customer->id_lang);
-
-        //$secure_key = Context::getContext()->customer->secure_key;
-
-        /* if ($this->isValidOrder() === true) {
-            $payment_status = Configuration::get('PS_OS_PAYMENT');
-            $message = null;
-        } else {
-            $payment_status = Configuration::get('PS_OS_ERROR');
-            $message = $this->module->l('An error occurred while processing payment');
-        } */
-
-        //$module_name = $this->module->displayName;
-        //$currency_id = (int) Context::getContext()->currency->id;
-
-        /*$validateOrder = $this->module->validateOrder($cart_id, $payment_status, $total,
-        $module_name, $message, array(), $currency_id, false, $secure_key);*/
 
         $this->getStandardCheckoutFormFields($context);
     }
@@ -97,7 +73,7 @@ class PayoutValidationModuleFrontController extends ModuleFrontController
      */
     public function getStandardCheckoutFormFields($context)
     {
-        //$notifyUrl = Configuration::get('PAYOUT_NOTIFY_URL');
+        
         $clientId          = Configuration::get('PAYOUT_CLIENT_ID');
         $secret            = Configuration::get('PAYOUT_SECRET');
         $sandbox           = Configuration::get('PAYOUT_MODE');
@@ -117,10 +93,9 @@ class PayoutValidationModuleFrontController extends ModuleFrontController
         $cart     = $context->cart;
         $currency = $this->context->currency;
         $total    = (float)$cart->getOrderTotal(true, Cart::BOTH);
-
-        //$url = $context->shop->getBaseURL(true) . 'module/payout/confirmation?cart_id=' . $cart->id;
         $url = $this->context->link->getModuleLink('payout', 'confirmation', ['cart_id' => $cart->id]);
-        /********** format billing and shipping Address **********/
+       /********** format billing and shipping Address **********/
+        $external_id =  $cart->id.'-'.time();
         $delivery_address      = $cart->id_address_delivery;
         $invoice_address       = $cart->id_address_invoice;
         $dAddress              = new Address($delivery_address);
@@ -148,22 +123,42 @@ class PayoutValidationModuleFrontController extends ModuleFrontController
         );
 
         $products = $cart->getProducts(true);
-        //$subscription_flag = 0;
+        $subscription_flag = 0;
         foreach ($products as $product) {
-            // $validate_subscription_data = Db::getInstance()->ExecuteS(
-            //    'select subscription from ' . _DB_PREFIX_ . 'product where id_product='.$product["id_product"]
-            //);
-            // if ($validate_subscription_data[0]['subscription']!=0) {
-            //  $subscription_flag = 1;
-            // }
+            $sqls = 'select subscription, frequency from ' . _DB_PREFIX_ . 'product where 
+            id_product='.$product["id_product"];
+             $validate_subscription_data = Db::getInstance()->ExecuteS($sqls);
+            if ($validate_subscription_data[0]['subscription'] != 0) {
+                $subscription_flag = 1;
+            }
             $productAttributes[] = array(
                 'name'       => $product['name'],
                 'unit_price' => round($product['price_with_reduction'], 2),
                 'quantity'   => $product['cart_quantity'],
 
             );
+            
+            if ($subscription_flag == 1) {
+                $nextRecurringDate = $this->module->getNextRecurringDate($validate_subscription_data[0]['frequency']);
+                $to_store_in_subscription = array();
+                $to_store_in_subscription['id_customer'] = $customer->id;
+                $to_store_in_subscription['id_product'] = $product['id_product'];
+                $to_store_in_subscription['id_product_attribute'] = $product['id_product_attribute'];
+                $to_store_in_subscription['quantity'] = $product['cart_quantity'];
+                $to_store_in_subscription['frequency'] = $validate_subscription_data[0]['frequency'];
+                $to_store_in_subscription['id_currency'] = $currency->id;
+                $to_store_in_subscription['id_lang'] = $context->language->id;
+                $to_store_in_subscription['id_external'] = $external_id;
+                $to_store_in_subscription['status'] = "initiated";
+                $to_store_in_subscription['last_payment_status'] = "initiated";
+                $to_store_in_subscription['last_payment_amount'] = round($product['price_with_reduction'], 2);
+                $to_store_in_subscription['created_at'] = date("Y-m-d H:i:s");
+                $to_store_in_subscription['updated_at'] = date("Y-m-d H:i:s");
+                $to_store_in_subscription['last_recurring_date'] = date("Y-m-d H:i:s");
+                $to_store_in_subscription['next_recurring_date'] = $nextRecurringDate;
+                Db::getInstance()->insert('payout_subscription_product', $to_store_in_subscription);
+            }
         }
-
         $checkout_data = array(
             'amount'           => $total,
             'currency'         => $currency->iso_code,
@@ -172,21 +167,20 @@ class PayoutValidationModuleFrontController extends ModuleFrontController
                 'last_name'  => $customer->lastname,
                 'email'      => $customer->email
             ],
-            'billing_address'  => json_encode($billing_address),
-            'shipping_address' => json_encode($shipping_address),
-            'products'         => json_encode($productAttributes),
-            'external_id'      => $cart->id.'-'.time(),
+            'billing_address'  => $billing_address,
+            'shipping_address' => $shipping_address,
+            'products'         => $productAttributes,
+            'external_id'      => $external_id,
             'redirect_url'     => $url
 
         );
-        // if($subscription_flag !=0) {
-        //   $checkout_data['mode'] = 'store_card';
-        // }
+        if ($subscription_flag !=0) {
+            $checkout_data['mode'] = 'store_card';
+        }
+        
         
         $response = $payout->createCheckout($checkout_data);
-        
         $checkoutUrl = $response->checkout_url;
-        //header("Location: $checkoutUrl");
         Tools::redirect($checkoutUrl);
         exit(0);
     }
