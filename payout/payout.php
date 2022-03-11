@@ -1,6 +1,6 @@
 <?php
 /**
- * 2007-2021 PrestaShop
+ * 2007-2022 PrestaShop
  *
  * NOTICE OF LICENSE
  *
@@ -19,7 +19,7 @@
  * needs please refer to http://www.prestashop.com for more information.
  *
  * @author    PrestaShop SA <contact@prestashop.com>
- * @copyright 2007-2021 PrestaShop SA
+ * @copyright 2007-2022 PrestaShop SA
  * @license   http://opensource.org/licenses/afl-3.0.php  Academic Free License (AFL 3.0)
  *  International Registered Trademark & Property of PrestaShop SA
  */
@@ -66,6 +66,59 @@ class Payout extends PaymentModule
      * Don't forget to create update methods if needed:
      * http://doc.prestashop.com/display/PS16/Enabling+the+Auto-Update
      */
+
+   Public function createNewStatus()
+   {
+        
+
+        $last_id=$this->Orderstatusid();
+      
+        if($last_id!='')
+        {
+            return $last_id;
+        }
+
+        $statusVal='PAYOUT_PENDING_PAYMENT';
+        $orderStateObj = new OrderState();
+        $orderStateObj->send_email = 0;
+        $orderStateObj->module_name =  $statusVal;
+        $orderStateObj->invoice = 0;
+        $orderStateObj->color = '#4169E1';
+        $orderStateObj->logable = 0;
+        $orderStateObj->shipped = 0;
+        $orderStateObj->unremovable = 1;
+        $orderStateObj->delivery = 0;
+        $orderStateObj->hidden = 0;
+        $orderStateObj->paid = 0;
+        $orderStateObj->pdf_delivery = 0;
+        $orderStateObj->pdf_invoice = 0;
+        $orderStateObj->deleted = 0;
+        $languageval= Language::getLanguages(true);
+        foreach ($languageval as $language) {
+
+            $orderStateObj->name[$language['id_lang']] = 'Payout Pending Payment';
+        }
+      $orderStateObj->add();
+      $last_id=$this->Orderstatusid();
+      
+      return  $last_id;
+
+   }
+
+
+
+
+   public function  Orderstatusid()
+   {
+    $last_id = Db::getInstance()->getValue('SELECT MAX(id_order_state) FROM '._DB_PREFIX_.'order_state where module_name="PAYOUT_PENDING_PAYMENT"');
+
+    return $last_id; 
+    //select id_order_state from ps_order_state  where module_name='PAYOUT_PENDING_PAYMENT'
+    
+   }
+
+    
+
     public function install()
     {
         if (extension_loaded('curl') == false) {
@@ -74,6 +127,12 @@ class Payout extends PaymentModule
             return false;
         }
 
+
+       $last_id=$this->createNewStatus();
+
+        Configuration::updateValue('PS_PAYOUNT_PENDING_STATUS', $last_id);
+        //$this->Orderstatusid();
+
         $iso_code = Country::getIsoById(Configuration::get('PS_COUNTRY_DEFAULT'));
 
         if (in_array($iso_code, $this->limited_countries) == false) {
@@ -81,7 +140,12 @@ class Payout extends PaymentModule
 
             return false;
         }
+
+        
+       
+        //Configuration::updateValue('PS_PAYOUNT_PENDING_STATUS', false);
         Configuration::updateValue('PAYOUT_LIVE_MODE', false);
+        Configuration::updateValue('PS_ORDER_TRANSECTION_BEFORE_PAYMENT', false);
         
         Configuration::updateValue(
             'PAYOUT_NOTIFY_URL',
@@ -115,8 +179,13 @@ class Payout extends PaymentModule
     {
         Configuration::deleteByName('PAYOUT_LIVE_MODE');
         Configuration::deleteByName('PAYOUT_NOTIFY_URL');
+        Configuration::deleteByName('PS_ORDER_TRANSECTION_BEFORE_PAYMENT');
+
+        Configuration::deleteByName('PS_PAYOUNT_PENDING_STATUS');
+
+
         include_once($this->local_path.'sql/uninstall.php');
-        $this->alterTable('remove');
+       // $this->alterTable('remove');
         return parent::uninstall();
     }
 
@@ -133,7 +202,7 @@ class Payout extends PaymentModule
         switch ($method) {
             case 'add':
                 $sql = 'ALTER TABLE ' . _DB_PREFIX_ . 'product  ADD `frequency` TEXT NULL DEFAULT NULL 
-                AFTER `state`, ADD `subscription` INT NOT NULL DEFAULT "0" AFTER `frequency`';
+                , ADD `subscription` INT NOT NULL DEFAULT "0"';
                 break;
             case 'remove':
                 $sql = 'ALTER TABLE ' . _DB_PREFIX_ . 'product DROP COLUMN `frequency`, 
@@ -417,9 +486,12 @@ class Payout extends PaymentModule
 
     /**
      * Create the structure of your form.
+     * 
      */
     protected function getConfigForm()
     {
+
+
         return array(
             'form' => array(
                 'legend' => array(
@@ -455,6 +527,28 @@ class Payout extends PaymentModule
                             )
                         ),
                     ),
+
+                       array(
+                        'type'    => 'switch',
+                        'label'   => $this->l('Order Creation before Payment'),
+                        'name'    => 'PS_ORDER_TRANSECTION_BEFORE_PAYMENT',
+                        'is_bool' => true,
+                        'desc'    => $this->l('Order Creation before Payment'),
+                        'values'  => array(
+                            array(
+                                'id'    => 'enabled',
+                                'value' => true,
+                                'label' => $this->l('Enabled')
+                            ),
+                            array(
+                                'id'    => 'disabled',
+                                'value' => false,
+                                'label' => $this->l('Disabled')
+                            )
+                        ),
+                    ),
+
+
                     array(
                         'col'   => 3,
                         'type'  => 'text',
@@ -484,7 +578,7 @@ class Payout extends PaymentModule
     protected function getConfigFormValues()
     {
         return array(
-           
+    'PS_ORDER_TRANSECTION_BEFORE_PAYMENT' => Configuration::get('PS_ORDER_TRANSECTION_BEFORE_PAYMENT','0'),
             'PAYOUT_ACCOUNT_EMAIL' => Configuration::get('PAYOUT_ACCOUNT_EMAIL', 'contact@payout.one'),
             'PAYOUT_MODE'          => Configuration::get('PAYOUT_MODE', null),
             'PAYOUT_NOTIFY_URL'    => Configuration::get('PAYOUT_NOTIFY_URL', null),

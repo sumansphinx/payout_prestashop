@@ -1,6 +1,6 @@
 <?php
 /**
- * 2007-2021 PrestaShop
+ * 2007-2022 PrestaShop
  *
  * NOTICE OF LICENSE
  *
@@ -19,7 +19,7 @@
  * needs please refer to http://www.prestashop.com for more information.
  *
  * @author    PrestaShop SA <contact@prestashop.com>
- * @copyright 2007-2021 PrestaShop SA
+ * @copyright 2007-2022 PrestaShop SA
  * @license   http://opensource.org/licenses/afl-3.0.php  Academic Free License (AFL 3.0)
  *  International Registered Trademark & Property of PrestaShop SA
  */
@@ -35,8 +35,35 @@ class PayoutWebhookModuleFrontController extends ModuleFrontController
             return;
         }
 
+        /** for update payment **/   
+        $notification_data = Tools::file_get_contents('php://input');
+        
+
+        $webhook_data = json_decode($notification_data, true);
+        $external_id = $webhook_data['external_id'];
+        if ($webhook_data['type'] == 'checkout.succeeded') 
+        {
+            $cart_ids = explode("-", $external_id);
+            $cart_id = $cart_ids[0];
+            $order_id = Order::getOrderByCartId((int) $cart_id);
+            $valBefore_order_payment= Configuration::get('PS_ORDER_TRANSECTION_BEFORE_PAYMENT');
+            if($valBefore_order_payment==1)
+            {  
+               $payment_status = Configuration::get('PS_OS_PAYMENT');
+               $order=new Order($order_id);
+               $history = new OrderHistory();
+               $history->id_order = (int)$order->id;
+               $history->changeIdOrderState($payment_status, (int)($order->id)); //order status=2 Payment  Accepted
+           
+            }
+        }
+        /** for update epayment **/ 
+
+
+
 
         /** For Webhook url */
+      
         if (!Tools::getIsset('cart_id')) {
             $notification_data = Tools::file_get_contents('php://input');
             $webhook_data = json_decode($notification_data, true);
@@ -111,7 +138,7 @@ class PayoutWebhookModuleFrontController extends ModuleFrontController
                     $message = null; // add comment to show in BO.
                     $module_name = $this->module->displayName;
                     $currency_id = $cart->id_currency;
-                    
+
                     $this->module->validateOrder(
                         $cart_id,
                         $payment_status,
@@ -123,11 +150,19 @@ class PayoutWebhookModuleFrontController extends ModuleFrontController
                         false,
                         $secure_key
                     );
+
                 }
+
+
             }
 
             echo "Ok";
             exit();
         }
+
+                      
     }
+
+   
 }
+

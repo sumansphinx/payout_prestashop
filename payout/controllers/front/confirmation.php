@@ -1,6 +1,6 @@
 <?php
 /**
- * 2007-2021 PrestaShop
+ * 2007-2022 PrestaShop
  *
  * NOTICE OF LICENSE
  *
@@ -19,7 +19,7 @@
  * needs please refer to http://www.prestashop.com for more information.
  *
  * @author    PrestaShop SA <contact@prestashop.com>
- * @copyright 2007-2021 PrestaShop SA
+ * @copyright 2007-2022 PrestaShop SA
  * @license   http://opensource.org/licenses/afl-3.0.php  Academic Free License (AFL 3.0)
  *  International Registered Trademark & Property of PrestaShop SA
  */
@@ -34,10 +34,41 @@ class PayoutConfirmationModuleFrontController extends ModuleFrontController
                 return;
         }
             
-            
+        $valBefore_order_payment= Configuration::get('PS_ORDER_TRANSECTION_BEFORE_PAYMENT');
+        if($valBefore_order_payment==1)
+        {  
+            $prestashop_Version = explode(".", _PS_VERSION_);
+            //Validate Prestashop version
+            if ($prestashop_Version[0]==1 && $prestashop_Version[1]==6) {
+                $cart_id = Tools::getValue('cart_id');
+                $order_id = Order::getOrderByCartId((int)$cart_id); 
+               
+               $payment_status = Configuration::get('PS_OS_PAYMENT');
+               $order=new Order($order_id);
+               $history = new OrderHistory();
+               $history->id_order = (int)$order->id;
+               $history->changeIdOrderState($payment_status, (int)($order->id)); //order status=2 Payment  Accepted
+               $cart = new Cart((int)$cart_id);
+                $customer = new Customer((int)$cart->id_customer);
+                $secure_key = Context::getContext()->customer->secure_key;
+    
+                if ($order_id && ($secure_key == $customer->secure_key)) {
+                    // The order has been placed so we redirect the customer on the confirmation page.
+                    $module_id = $this->module->id;
+                    Tools::redirect(
+                        'index.php?controller=order-confirmation&id_cart=' . $cart_id . '&id_module=' . $module_id .
+                        '&id_order=' . $order_id . '&key=' . $secure_key
+                    );
+                    die();
+                }
+            }
+
+       
+        }    
         /** For Webhook url */
             
         if (Tools::getIsset('cart_id')) {
+            
             $cart_id = Tools::getValue('cart_id');
             
             $order_id = Order::getOrderByCartId((int)$cart_id);

@@ -1,6 +1,6 @@
 <?php
 /**
- * 2007-2021 PrestaShop
+ * 2007-2022 PrestaShop
  *
  * NOTICE OF LICENSE
  *
@@ -19,7 +19,7 @@
  * needs please refer to http://www.prestashop.com for more information.
  *
  * @author    PrestaShop SA <contact@prestashop.com>
- * @copyright 2007-2021 PrestaShop SA
+ * @copyright 2007-2022 PrestaShop SA
  * @license   http://opensource.org/licenses/afl-3.0.php  Academic Free License (AFL 3.0)
  *  International Registered Trademark & Property of PrestaShop SA
  */
@@ -133,10 +133,19 @@ class PayoutValidationModuleFrontController extends ModuleFrontController
             }
             $productAttributes[] = array(
                 'name'       => $product['name'],
-                'unit_price' => round($product['price_with_reduction'], 2),
+                'unit_price' => "".round($product['price_with_reduction'],2),
                 'quantity'   => $product['cart_quantity'],
 
             );
+
+            /*'unit_price' => round($product['price_with_reduction'], 2),
+             echo "<pre>";
+             print_r($productAttributes);
+             die; */
+
+            
+            
+            
             
             if ($subscription_flag == 1) {
                 $nextRecurringDate = $this->module->getNextRecurringDate($validate_subscription_data[0]['frequency']);
@@ -159,6 +168,60 @@ class PayoutValidationModuleFrontController extends ModuleFrontController
                 Db::getInstance()->insert('payout_subscription_product', $to_store_in_subscription);
             }
         }
+
+           //$dataval= $this->module->createNewStatus();
+           
+           //var_dump($dataval);
+
+           //die;
+           //$lastreturnid=$this->module->Orderstatusid();
+
+          // var_dump($lastreturnid);
+           //die;
+           //var_dump($dataval);
+           //die; 
+
+
+
+        $valBefore_order_payment= Configuration::get('PS_ORDER_TRANSECTION_BEFORE_PAYMENT');
+        if($valBefore_order_payment==1)
+        {
+
+            // Validate The order function 
+            // Append order id in last of external id - seprated 
+
+            $cart_ids = explode("-", $external_id);
+            $cart_id = $cart_ids[0];
+
+
+            $cart = new Cart((int) $cart_id);
+            $customer = new Customer((int) $cart->id_customer);
+            $secure_key = $customer->secure_key;
+            
+            $payment_status = Configuration::get('PS_PAYOUNT_PENDING_STATUS'); // Default value for a payment
+            $message = null; // add comment to show in BO.
+            $module_name = $this->module->displayName;
+            $currency_id = $cart->id_currency; 
+            $this->module->validateOrder(
+                        $cart_id,
+                        $payment_status,
+                        $cart->getOrderTotal(),
+                        $module_name,
+                        $message,
+                        array(),
+                        $currency_id,
+                        false,
+                        $secure_key
+                    );
+
+          
+            $order_id = Order::getOrderByCartId((int) $cart_id);
+            $external_id=$external_id.'-'.$order_id;
+            
+        }
+
+        
+
         $checkout_data = array(
             'amount'           => $total,
             'currency'         => $currency->iso_code,
@@ -174,6 +237,11 @@ class PayoutValidationModuleFrontController extends ModuleFrontController
             'redirect_url'     => $url
 
         );
+
+
+
+
+
         if ($subscription_flag !=0) {
             $checkout_data['mode'] = 'store_card';
         }
