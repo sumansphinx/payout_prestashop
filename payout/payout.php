@@ -140,13 +140,9 @@ class Payout extends PaymentModule
 
             return false;
         }
-
-        
-       
         //Configuration::updateValue('PS_PAYOUNT_PENDING_STATUS', false);
         Configuration::updateValue('PAYOUT_LIVE_MODE', false);
         Configuration::updateValue('PS_ORDER_TRANSECTION_BEFORE_PAYMENT', false);
-        
         Configuration::updateValue(
             'PAYOUT_NOTIFY_URL',
             $this->context->link->getModuleLink(
@@ -179,13 +175,14 @@ class Payout extends PaymentModule
     {
         Configuration::deleteByName('PAYOUT_LIVE_MODE');
         Configuration::deleteByName('PAYOUT_NOTIFY_URL');
+
         Configuration::deleteByName('PS_ORDER_TRANSECTION_BEFORE_PAYMENT');
 
         Configuration::deleteByName('PS_PAYOUNT_PENDING_STATUS');
 
 
         include_once($this->local_path.'sql/uninstall.php');
-       // $this->alterTable('remove');
+        $this->alterTable('remove');
         return parent::uninstall();
     }
 
@@ -491,7 +488,6 @@ class Payout extends PaymentModule
     protected function getConfigForm()
     {
 
-
         return array(
             'form' => array(
                 'legend' => array(
@@ -579,6 +575,7 @@ class Payout extends PaymentModule
     {
         return array(
     'PS_ORDER_TRANSECTION_BEFORE_PAYMENT' => Configuration::get('PS_ORDER_TRANSECTION_BEFORE_PAYMENT','0'),
+
             'PAYOUT_ACCOUNT_EMAIL' => Configuration::get('PAYOUT_ACCOUNT_EMAIL', 'contact@payout.one'),
             'PAYOUT_MODE'          => Configuration::get('PAYOUT_MODE', null),
             'PAYOUT_NOTIFY_URL'    => Configuration::get('PAYOUT_NOTIFY_URL', null),

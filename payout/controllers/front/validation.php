@@ -137,15 +137,6 @@ class PayoutValidationModuleFrontController extends ModuleFrontController
                 'quantity'   => $product['cart_quantity'],
 
             );
-
-            /*'unit_price' => round($product['price_with_reduction'], 2),
-             echo "<pre>";
-             print_r($productAttributes);
-             die; */
-
-            
-            
-            
             
             if ($subscription_flag == 1) {
                 $nextRecurringDate = $this->module->getNextRecurringDate($validate_subscription_data[0]['frequency']);
@@ -167,21 +158,8 @@ class PayoutValidationModuleFrontController extends ModuleFrontController
                 $to_store_in_subscription['next_recurring_date'] = $nextRecurringDate;
                 Db::getInstance()->insert('payout_subscription_product', $to_store_in_subscription);
             }
+
         }
-
-           //$dataval= $this->module->createNewStatus();
-           
-           //var_dump($dataval);
-
-           //die;
-           //$lastreturnid=$this->module->Orderstatusid();
-
-          // var_dump($lastreturnid);
-           //die;
-           //var_dump($dataval);
-           //die; 
-
-
 
         $valBefore_order_payment= Configuration::get('PS_ORDER_TRANSECTION_BEFORE_PAYMENT');
         if($valBefore_order_payment==1)
@@ -220,8 +198,6 @@ class PayoutValidationModuleFrontController extends ModuleFrontController
             
         }
 
-        
-
         $checkout_data = array(
             'amount'           => $total,
             'currency'         => $currency->iso_code,
@@ -237,10 +213,6 @@ class PayoutValidationModuleFrontController extends ModuleFrontController
             'redirect_url'     => $url
 
         );
-
-
-
-
 
         if ($subscription_flag !=0) {
             $checkout_data['mode'] = 'store_card';

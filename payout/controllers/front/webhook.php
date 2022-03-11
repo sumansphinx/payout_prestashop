@@ -57,13 +57,8 @@ class PayoutWebhookModuleFrontController extends ModuleFrontController
            
             }
         }
-        /** for update epayment **/ 
-
-
-
-
-        /** For Webhook url */
       
+        /** For Webhook url */
         if (!Tools::getIsset('cart_id')) {
             $notification_data = Tools::file_get_contents('php://input');
             $webhook_data = json_decode($notification_data, true);
@@ -138,7 +133,6 @@ class PayoutWebhookModuleFrontController extends ModuleFrontController
                     $message = null; // add comment to show in BO.
                     $module_name = $this->module->displayName;
                     $currency_id = $cart->id_currency;
-
                     $this->module->validateOrder(
                         $cart_id,
                         $payment_status,
@@ -153,16 +147,10 @@ class PayoutWebhookModuleFrontController extends ModuleFrontController
 
                 }
 
-
             }
 
             echo "Ok";
             exit();
         }
-
-                      
     }
-
-   
 }
-
